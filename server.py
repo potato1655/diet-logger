@@ -303,7 +303,7 @@ If multiple food items are on the plate, list each separately."""
         img_bytes = buf.getvalue()
 
         response = gemini_client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-3.6-flash',
             contents=[
                 prompt,
                 genai.types.Part.from_bytes(data=img_bytes, mime_type='image/jpeg'),
