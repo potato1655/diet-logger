@@ -72,7 +72,8 @@ def load_credentials():
         try:
             creds.refresh(GoogleRequest())
             save_token(creds)
-        except Exception:
+        except Exception as e:
+            print(f"Token refresh failed: {e}")
             return None
     return creds
 
@@ -137,8 +138,12 @@ def ensure_data_source(headers):
 def log_to_google_fit(foods, meal_type):
     """Push each food item as a nutrition data point to Google Fit."""
     creds = load_credentials()
-    if not creds or not creds.valid:
-        return False, 'Not authenticated with Google. Please sign in first.'
+    if not creds:
+        return False, 'Not authenticated: credentials file missing.'
+    if not creds.valid:
+        if creds.expired and not creds.refresh_token:
+            return False, 'Not authenticated: token expired and no refresh token available. Please sign in again.'
+        return False, f'Not authenticated: creds.valid={creds.valid}, expired={creds.expired}, has_refresh={bool(creds.refresh_token)}'
 
     headers = {
         'Authorization': f'Bearer {creds.token}',
