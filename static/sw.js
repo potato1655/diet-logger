@@ -1,9 +1,22 @@
-const CACHE = 'diet-logger-v4';
+const CACHE = 'diet-logger-v5';
 const ASSETS = ['/', '/style.css', '/app.js', '/manifest.json'];
 
-self.addEventListener('install', e =>
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)))
-);
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.map(key => {
+          if (key !== CACHE) return caches.delete(key);
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
 
 self.addEventListener('fetch', e => {
   // Only cache GET requests for static assets
