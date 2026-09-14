@@ -386,6 +386,9 @@ if __name__ == '__main__':
     print('='*55)
     print('  Press Ctrl+C to stop.\n')
 
+    # Relax scope checking (Google sometimes changes scope order/names in the response)
+    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
     # Allow OAuth redirect on http for local dev only
     if REDIRECT_URI.startswith('http://localhost'):
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
