@@ -21,6 +21,18 @@ app = Flask(__name__, static_folder='static')
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default-dev-key-12345')
 CORS(app, supports_credentials=True)
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Log the exception for debugging
+    print(f"Unhandled Exception: {e}")
+    # Return JSON instead of HTML for all unhandled errors
+    return jsonify({
+        "success": False,
+        "error": str(e),
+        "type": type(e).__name__
+    }), 500
+
+
 # ── Gemini setup ─────────────────────────────────────────────────────────────
 gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -283,13 +295,42 @@ def auth_status():
     return jsonify({'authenticated': False})
 
 
+import time
+
+def call_gemini_with_retry(prompt, img_bytes=None, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            if img_bytes:
+                contents = [
+                    prompt,
+                    genai.types.Part.from_bytes(data=img_bytes, mime_type='image/jpeg'),
+                ]
+            else:
+                contents = [prompt]
+                
+            return gemini_client.models.generate_content(
+                model='gemini-3.6-flash',
+                contents=contents,
+            )
+        except Exception as e:
+            if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(2 ** attempt) # 1s, 2s, 4s
+            else:
+                raise
+
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.get_json()
-    image_b64 = data.get('image', '')
-    extra_text = data.get('text', '').strip()
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No JSON payload received'}), 400
+        image_b64 = data.get('image', '')
+        extra_text = data.get('text', '').strip()
 
-    prompt = """You are a nutrition expert. Analyze this food image carefully.
+        prompt = """You are a nutrition expert. Analyze this food image carefully.
 
 List EVERY visible food item with realistic portion estimates and nutritional values.
 For Indian food (dal, rice, roti, sabzi, curry, etc.), use standard home-cooked portions.
@@ -315,32 +356,6 @@ Return ONLY a valid JSON object matching this exact structure — no explanation
 }
 """
 
-import time
-
-def call_gemini_with_retry(prompt, img_bytes=None, max_retries=3):
-    import time
-    for attempt in range(max_retries):
-        try:
-            if img_bytes:
-                contents = [
-                    prompt,
-                    genai.types.Part.from_bytes(data=img_bytes, mime_type='image/jpeg'),
-                ]
-            else:
-                contents = [prompt]
-                
-            return gemini_client.models.generate_content(
-                model='gemini-3.6-flash',
-                contents=contents,
-            )
-        except Exception as e:
-            if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
-                if attempt == max_retries - 1:
-                    raise
-                time.sleep(2 ** attempt) # 1s, 2s, 4s
-            else:
-                raise
-
     if extra_text:
         prompt += f'\n\nUser note: {extra_text}'
 
@@ -362,7 +377,6 @@ def call_gemini_with_retry(prompt, img_bytes=None, max_retries=3):
                 break
 
         parsed = json.loads(raw)
-        # Ensure backwards compatibility if model returns an array
         if isinstance(parsed, list):
             foods = parsed
             questions = []
