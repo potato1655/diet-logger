@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#16a34a" />
+  <title>Diet Logger</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+</head>
+<body>
+
+<!-- Auth overlay -->
+<div id="auth-overlay" class="hidden">
+  <div class="auth-card">
+    <div class="auth-icon">🥗</div>
+    <h1>Diet Logger</h1>
+    <p>Sign in with Google to log your meals to Google Health</p>
+    <button class="btn-google" onclick="signIn()">Sign in with Google</button>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app" class="hidden">
+
+  <!-- Header -->
+  <header>
+    <span class="logo">🥗 Diet Logger</span>
+    <button class="btn-logout" onclick="signOut()" title="Sign out">⏻</button>
+  </header>
+
+  <!-- Content area -->
+  <main>
+
+    <!-- ── LOG TAB ── -->
+    <section id="tab-log" class="tab-content active">
+
+      <!-- Upload area -->
+      <div class="upload-area" onclick="document.getElementById('food-input').click()">
+        <input type="file" id="food-input" accept="image/*" capture="camera" style="display:none" onchange="handleImage(event)" />
+        <div id="preview-container">
+          <div class="upload-placeholder">
+            <span class="upload-icon">📸</span>
+            <p>Tap to take a photo<br/><small>or choose from gallery</small></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Context text -->
+      <div class="form-group">
+        <input type="text" id="extra-text" placeholder="Anything to add? (e.g. extra ghee, large portion)" />
+      </div>
+
+      <!-- Meal type -->
+      <div class="meal-selector">
+        <button class="meal-btn" data-meal="Breakfast" onclick="selectMeal(this)">🌅 Breakfast</button>
+        <button class="meal-btn active" data-meal="Lunch" onclick="selectMeal(this)">☀️ Lunch</button>
+        <button class="meal-btn" data-meal="Dinner" onclick="selectMeal(this)">🌙 Dinner</button>
+        <button class="meal-btn" data-meal="Snack" onclick="selectMeal(this)">🍎 Snack</button>
+      </div>
+
+      <!-- Analyze button -->
+      <button id="analyze-btn" class="btn-analyze hidden" onclick="analyzeFood()">🔍 Analyze Food</button>
+
+      <!-- Spinner -->
+      <div id="spinner" class="hidden">
+        <div class="spinner"></div>
+        <p>Analyzing your food...</p>
+      </div>
+
+      <!-- Food items -->
+      <div id="food-results" class="hidden">
+        <div class="section-header">
+          <h2>Detected Foods</h2>
+          <button class="btn-add" onclick="addFoodManually()">+ Add</button>
+        </div>
+        <div id="food-list"></div>
+        <div class="totals-card" id="totals-card"></div>
+        <button id="log-btn" class="btn-log" onclick="logMeal()">✅ Log Meal</button>
+      </div>
+
+      <!-- Success message -->
+      <div id="success-msg" class="success-msg hidden">
+        <span>✅ Meal logged to Google Health!</span>
+        <button onclick="resetLog()">Log another</button>
+      </div>
+
+    </section>
+
+    <!-- ── HISTORY TAB ── -->
+    <section id="tab-history" class="tab-content">
+      <h2 class="history-title">Past Meals</h2>
+      <div id="history-list"><p class="empty-msg">No meals logged yet.</p></div>
+    </section>
+
+  </main>
+
+  <!-- Bottom tab bar -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('log', this)">
+      <span>📷</span><small>Log</small>
+    </button>
+    <button class="tab-btn" onclick="switchTab('history', this)">
+      <span>📋</span><small>History</small>
+    </button>
+  </nav>
+
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
