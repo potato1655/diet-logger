@@ -218,15 +218,26 @@ def oauth_login():
 
 @app.route('/oauth/callback')
 def oauth_callback():
-    flow = Flow.from_client_config(
-        get_client_config(),
-        scopes=SCOPES,
-        redirect_uri=REDIRECT_URI,
-        state=session.get('oauth_state'),
-    )
-    flow.fetch_token(authorization_response=request.url)
-    save_token(flow.credentials)
-    return redirect('/?auth=success')
+    try:
+        flow = Flow.from_client_config(
+            get_client_config(),
+            scopes=SCOPES,
+            redirect_uri=REDIRECT_URI,
+            state=session.get('oauth_state'),
+        )
+        
+        # Railway proxy terminates SSL, so request.url might be http://
+        # Force it to https:// if our REDIRECT_URI is https
+        auth_response = request.url
+        if REDIRECT_URI.startswith('https') and auth_response.startswith('http:'):
+            auth_response = auth_response.replace('http:', 'https:', 1)
+            
+        flow.fetch_token(authorization_response=auth_response)
+        save_token(flow.credentials)
+        return redirect('/?auth=success')
+    except Exception as e:
+        import traceback
+        return f"OAuth Error: {str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
 
 @app.route('/oauth/logout', methods=['POST'])
