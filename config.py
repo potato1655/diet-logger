@@ -4,7 +4,11 @@ import os
 # For local dev: create a .env file or set them in your terminal
 # For cloud: set them in Railway's Variables dashboard
 
-GEMINI_API_KEY       = os.environ.get('GEMINI_API_KEY', 'YOUR_GEMINI_API_KEY')
+# Extract any env var that starts with GEMINI_API_KEY (e.g. GEMINI_API_KEY, GEMINI_API_KEY_2, etc)
+GEMINI_API_KEYS = [v for k, v in os.environ.items() if k.startswith('GEMINI_API_KEY') and v]
+# Fallback for local testing if none provided
+if not GEMINI_API_KEYS:
+    GEMINI_API_KEYS = ['YOUR_GEMINI_API_KEY']
 GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_CLIENT_ID.apps.googleusercontent.com')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', 'YOUR_CLIENT_SECRET')
 

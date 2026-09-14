@@ -14,7 +14,7 @@ from google.auth.transport.requests import Request as GoogleRequest
 from google_auth_oauthlib.flow import Flow
 import requests as http_requests
 
-from config import GEMINI_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI, PORT
+from config import GEMINI_API_KEYS, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI, PORT
 
 # ── App setup ────────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder='static')
@@ -34,7 +34,8 @@ def handle_exception(e):
 
 
 # ── Gemini setup ─────────────────────────────────────────────────────────────
-gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+import random
+gemini_clients = [genai.Client(api_key=key) for key in GEMINI_API_KEYS]
 
 # ── File paths ───────────────────────────────────────────────────────────────
 os.makedirs('data', exist_ok=True)
@@ -308,7 +309,8 @@ def call_gemini_with_retry(prompt, img_bytes=None, max_retries=3):
             else:
                 contents = [prompt]
                 
-            return gemini_client.models.generate_content(
+            client = random.choice(gemini_clients)
+            return client.models.generate_content(
                 model='gemini-3.6-flash',
                 contents=contents,
             )
