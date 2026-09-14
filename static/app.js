@@ -60,14 +60,42 @@ function handleImage(event) {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    currentImageB64 = e.target.result.split(',')[1]; // strip data:...;base64,
-    // Show preview
-    const container = document.getElementById('preview-container');
-    container.innerHTML = `<img src="${e.target.result}" alt="Food preview" />`;
-    show('analyze-btn');
-    hide('food-results');
-    hide('success-msg');
-    currentFoods = [];
+    const img = new Image();
+    img.onload = () => {
+      // Client side resize to avoid Payload Too Large errors
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 1024;
+      const MAX_HEIGHT = 1024;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      currentImageB64 = dataUrl.split(',')[1];
+      
+      const container = document.getElementById('preview-container');
+      container.innerHTML = `<img src="${dataUrl}" alt="Food preview" />`;
+      show('analyze-btn');
+      hide('food-results');
+      hide('success-msg');
+      currentFoods = [];
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -95,7 +123,13 @@ async function analyzeFood() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: currentImageB64, text: extraText }),
     });
-    const data = await res.json();
+    let data;
+    try {
+      const text = await res.text();
+      data = JSON.parse(text);
+    } catch (err) {
+      throw new Error(`Server returned invalid response (Status ${res.status}). This usually means the image file is too large.`);
+    }
 
     hide('spinner');
 
