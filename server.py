@@ -56,10 +56,15 @@ def get_client_config():
 
 def load_credentials():
     """Load stored OAuth credentials, refresh if expired."""
-    if not os.path.exists(TOKEN_FILE):
-        return None
-    with open(TOKEN_FILE) as f:
-        data = json.load(f)
+    data = session.get('google_token')
+    if not data:
+        # Fallback to local file just in case for older sessions
+        if os.path.exists(TOKEN_FILE):
+            with open(TOKEN_FILE) as f:
+                data = json.load(f)
+        else:
+            return None
+            
     creds = Credentials(
         token=data.get('token'),
         refresh_token=data.get('refresh_token'),
@@ -79,8 +84,14 @@ def load_credentials():
 
 
 def save_token(creds):
-    with open(TOKEN_FILE, 'w') as f:
-        json.dump({'token': creds.token, 'refresh_token': creds.refresh_token}, f)
+    data = {'token': creds.token, 'refresh_token': creds.refresh_token}
+    session['google_token'] = data
+    # Also save to file as backup for development
+    try:
+        with open(TOKEN_FILE, 'w') as f:
+            json.dump(data, f)
+    except Exception:
+        pass
 
 
 def load_log():
@@ -255,8 +266,12 @@ def oauth_callback():
 
 @app.route('/oauth/logout', methods=['POST'])
 def oauth_logout():
+    session.pop('google_token', None)
     if os.path.exists(TOKEN_FILE):
-        os.remove(TOKEN_FILE)
+        try:
+            os.remove(TOKEN_FILE)
+        except OSError:
+            pass
     return jsonify({'success': True})
 
 
