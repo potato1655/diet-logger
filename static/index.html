@@ -37,14 +37,19 @@
     <section id="tab-log" class="tab-content active">
 
       <!-- Upload area -->
-      <div class="upload-area" onclick="document.getElementById('food-input').click()">
-        <input type="file" id="food-input" accept="image/*" style="display:none" onchange="handleImage(event)" />
+      <div class="upload-area">
         <div id="preview-container">
           <div class="upload-placeholder">
             <span class="upload-icon">📸</span>
-            <p>Tap to take a photo<br/><small>or choose from gallery</small></p>
+            <p>Select an image source</p>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+              <button type="button" class="btn-log" style="padding: 0.5rem 1rem; width: auto;" onclick="event.stopPropagation(); document.getElementById('camera-input').click()">📷 Camera</button>
+              <button type="button" class="btn-log" style="padding: 0.5rem 1rem; width: auto; background: var(--text);" onclick="event.stopPropagation(); document.getElementById('gallery-input').click()">🖼️ Gallery</button>
+            </div>
           </div>
         </div>
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleImage(event)" />
+        <input type="file" id="gallery-input" accept="image/*" style="display:none" onchange="handleImage(event)" />
       </div>
 
       <!-- Context text -->
