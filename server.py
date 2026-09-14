@@ -300,6 +300,32 @@ Return ONLY a valid JSON object matching this exact structure — no explanation
 }
 """
 
+import time
+
+def call_gemini_with_retry(prompt, img_bytes=None, max_retries=3):
+    import time
+    for attempt in range(max_retries):
+        try:
+            if img_bytes:
+                contents = [
+                    prompt,
+                    genai.types.Part.from_bytes(data=img_bytes, mime_type='image/jpeg'),
+                ]
+            else:
+                contents = [prompt]
+                
+            return gemini_client.models.generate_content(
+                model='gemini-3.6-flash',
+                contents=contents,
+            )
+        except Exception as e:
+            if '429' in str(e) or 'RESOURCE_EXHAUSTED' in str(e):
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(2 ** attempt) # 1s, 2s, 4s
+            else:
+                raise
+
     if extra_text:
         prompt += f'\n\nUser note: {extra_text}'
 
@@ -312,13 +338,7 @@ Return ONLY a valid JSON object matching this exact structure — no explanation
         img.save(buf, format='JPEG', quality=85)
         img_bytes = buf.getvalue()
 
-        response = gemini_client.models.generate_content(
-            model='gemini-3.6-flash',
-            contents=[
-                prompt,
-                genai.types.Part.from_bytes(data=img_bytes, mime_type='image/jpeg'),
-            ],
-        )
+        response = call_gemini_with_retry(prompt, img_bytes)
 
         raw = response.text.strip()
         for fence in ('```json', '```'):
@@ -359,10 +379,7 @@ Update the portion and macros based on the user's feedback.
 Return ONLY a valid JSON object matching the exact structure above. No explanation, no markdown.
 """
     try:
-        response = gemini_client.models.generate_content(
-            model='gemini-3.6-flash',
-            contents=[prompt],
-        )
+        response = call_gemini_with_retry(prompt)
         raw = response.text.strip()
         for fence in ('```json', '```'):
             if fence in raw:

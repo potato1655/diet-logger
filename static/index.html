@@ -40,11 +40,11 @@
       <div class="upload-area">
         <div id="preview-container">
           <div class="upload-placeholder">
-            <span class="upload-icon">📸</span>
-            <p>Select an image source</p>
-            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-              <button type="button" class="btn-log" style="padding: 0.5rem 1rem; width: auto;" onclick="event.stopPropagation(); document.getElementById('camera-input').click()">📷 Camera</button>
-              <button type="button" class="btn-log" style="padding: 0.5rem 1rem; width: auto; background: var(--text);" onclick="event.stopPropagation(); document.getElementById('gallery-input').click()">🖼️ Gallery</button>
+            <span class="upload-icon">🥗</span>
+            <p>Add a food photo</p>
+            <div class="upload-buttons">
+              <button type="button" class="btn-secondary" onclick="event.stopPropagation(); document.getElementById('camera-input').click()">📷 Camera</button>
+              <button type="button" class="btn-secondary" onclick="event.stopPropagation(); document.getElementById('gallery-input').click()">🖼️ Gallery</button>
             </div>
           </div>
         </div>
@@ -75,10 +75,10 @@
       </div>
 
       <!-- AI Questions -->
-      <div id="ai-questions-container" class="hidden" style="background: #e0f2fe; border: 1px solid #7dd3fc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-        <h3 style="margin-top: 0; color: #0284c7; font-size: 1rem;">🤔 AI Questions</h3>
-        <ul id="ai-questions-list" style="margin: 0.5rem 0; padding-left: 1.5rem; color: #0369a1; font-size: 0.9rem;"></ul>
-        <p style="font-size: 0.8rem; color: #0284c7; margin-bottom: 0;">(Answer these in the top box and hit Re-Analyze)</p>
+      <div id="ai-questions-container" class="hidden ai-questions-card">
+        <h3>🤔 AI Questions</h3>
+        <ul id="ai-questions-list"></ul>
+        <p>(Answer these in the top box and hit Re-Analyze)</p>
       </div>
 
       <!-- Food items -->
