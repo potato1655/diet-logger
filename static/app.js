@@ -103,6 +103,8 @@ async function analyzeFood() {
       currentFoods = data.foods;
       renderFoods();
       show('food-results');
+      show('analyze-btn');
+      document.getElementById('analyze-btn').innerText = '🔄 Re-Analyze with text';
     } else {
       alert('Analysis failed: ' + data.error);
       show('analyze-btn');
