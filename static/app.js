@@ -102,6 +102,16 @@ async function analyzeFood() {
     if (data.success) {
       currentFoods = data.foods;
       renderFoods();
+      
+      const qContainer = document.getElementById('ai-questions-container');
+      const qList = document.getElementById('ai-questions-list');
+      if (data.questions && data.questions.length > 0) {
+        qList.innerHTML = data.questions.map(q => `<li>${escHtml(q)}</li>`).join('');
+        qContainer.classList.remove('hidden');
+      } else {
+        qContainer.classList.add('hidden');
+      }
+      
       show('food-results');
       show('analyze-btn');
       document.getElementById('analyze-btn').innerText = '🔄 Re-Analyze with text';

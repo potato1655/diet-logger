@@ -279,20 +279,26 @@ def analyze():
 List EVERY visible food item with realistic portion estimates and nutritional values.
 For Indian food (dal, rice, roti, sabzi, curry, etc.), use standard home-cooked portions.
 
-Return ONLY a valid JSON array — no explanation, no markdown, just the array:
-[
-  {
-    "name": "Food name (be specific, e.g. 'Basmati Rice' not just 'Rice')",
-    "quantity": "Estimated amount (e.g. 1 medium bowl, 2 rotis, 150g)",
-    "calories": 300,
-    "protein_g": 8.0,
-    "carbs_g": 55.0,
-    "fat_g": 5.0,
-    "fiber_g": 2.0
-  }
-]
+If you are unsure about any ingredients (e.g., is it ghee or oil? paneer or tofu?), ask brief clarifying questions.
 
-If multiple food items are on the plate, list each separately."""
+Return ONLY a valid JSON object matching this exact structure — no explanation, no markdown:
+{
+  "foods": [
+    {
+      "name": "Food name (be specific)",
+      "quantity": "Estimated amount",
+      "calories": 300,
+      "protein_g": 8.0,
+      "carbs_g": 55.0,
+      "fat_g": 5.0,
+      "fiber_g": 2.0
+    }
+  ],
+  "questions": [
+    "Is that ghee on the roti?"
+  ]
+}
+"""
 
     if extra_text:
         prompt += f'\n\nUser note: {extra_text}'
@@ -300,7 +306,6 @@ If multiple food items are on the plate, list each separately."""
     try:
         img_bytes = base64.b64decode(image_b64)
         img = Image.open(BytesIO(img_bytes)).convert('RGB')
-        # Resize if too large (Gemini limit)
         if max(img.size) > 1024:
             img.thumbnail((1024, 1024))
         buf = BytesIO()
@@ -316,14 +321,21 @@ If multiple food items are on the plate, list each separately."""
         )
 
         raw = response.text.strip()
-        # Strip code fences if present
         for fence in ('```json', '```'):
             if fence in raw:
                 raw = raw.split(fence, 1)[1].rsplit('```', 1)[0].strip()
                 break
 
-        foods = json.loads(raw)
-        return jsonify({'success': True, 'foods': foods})
+        parsed = json.loads(raw)
+        # Ensure backwards compatibility if model returns an array
+        if isinstance(parsed, list):
+            foods = parsed
+            questions = []
+        else:
+            foods = parsed.get('foods', [])
+            questions = parsed.get('questions', [])
+
+        return jsonify({'success': True, 'foods': foods, 'questions': questions})
 
     except json.JSONDecodeError as e:
         return jsonify({'success': False, 'error': f'AI returned invalid JSON: {e}', 'raw': response.text}), 500
