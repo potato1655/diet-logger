@@ -323,14 +323,13 @@ def call_gemini_with_retry(prompt, img_bytes=None, max_retries=3):
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'No JSON payload received'}), 400
-        image_b64 = data.get('image', '')
-        extra_text = data.get('text', '').strip()
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No JSON payload received'}), 400
+    image_b64 = data.get('image', '')
+    extra_text = data.get('text', '').strip()
 
-        prompt = """You are a nutrition expert. Analyze this food image carefully.
+    prompt = """You are a nutrition expert. Analyze this food image carefully.
 
 List EVERY visible food item with realistic portion estimates and nutritional values.
 For Indian food (dal, rice, roti, sabzi, curry, etc.), use standard home-cooked portions.
