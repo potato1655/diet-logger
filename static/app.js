@@ -1,4 +1,4 @@
-﻿// ── State ─────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────
 let currentFoods   = [];
 let selectedMeal   = 'Lunch';
 let currentImageB64 = null;
@@ -141,7 +141,13 @@ function renderFoods() {
         <input type="number" placeholder="Protein (g)" value="${food.protein_g}" id="edit-pro-${idx}" />
         <input type="number" placeholder="Carbs (g)" value="${food.carbs_g}" id="edit-carb-${idx}" />
         <input type="number" placeholder="Fat (g)" value="${food.fat_g}" id="edit-fat-${idx}" />
-        <button class="btn-save-edit edit-full" onclick="saveEdit(${idx})">Save</button>
+        
+        <div class="edit-full refine-box">
+          <input type="text" id="refine-text-${idx}" placeholder="e.g. 'it was a small apple'" style="width: 70%;" />
+          <button type="button" onclick="refineFood(${idx})" style="padding: 0.5rem; background: var(--primary); color: white; border: none; border-radius: 4px;">✨ Refine</button>
+        </div>
+        
+        <button class="btn-save edit-full" onclick="saveEdit(${idx})">💾 Save Changes</button>
       </div>
     `;
     list.appendChild(card);
@@ -167,6 +173,50 @@ function saveEdit(idx) {
   };
   renderFoods();
 }
+
+async function refineFood(idx) {
+  const text = document.getElementById(`refine-text-${idx}`).value.trim();
+  if (!text) return;
+  
+  // Read current unsaved values from the form just in case they modified it
+  const currentFood = {
+    name:      document.getElementById(`edit-name-${idx}`).value,
+    quantity:  document.getElementById(`edit-qty-${idx}`).value,
+    calories:  parseFloat(document.getElementById(`edit-cal-${idx}`).value)  || 0,
+    protein_g: parseFloat(document.getElementById(`edit-pro-${idx}`).value)  || 0,
+    carbs_g:   parseFloat(document.getElementById(`edit-carb-${idx}`).value) || 0,
+    fat_g:     parseFloat(document.getElementById(`edit-fat-${idx}`).value)  || 0,
+  };
+
+  const btn = document.querySelector(`#edit-${idx} button[onclick="refineFood(${idx})"]`);
+  btn.innerText = '✨ Refining...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/refine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ food: currentFood, text: text }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      currentFoods[idx] = data.food;
+      renderFoods();
+      // Keep edit open
+      document.getElementById(`edit-${idx}`).classList.remove('hidden');
+    } else {
+      alert('Refine failed: ' + data.error);
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    if (btn) {
+      btn.innerText = '✨ Refine';
+      btn.disabled = false;
+    }
+  }
+}
+
 
 function removeFood(idx) {
   currentFoods.splice(idx, 1);

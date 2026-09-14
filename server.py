@@ -331,6 +331,36 @@ If multiple food items are on the plate, list each separately."""
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/refine', methods=['POST'])
+def refine():
+    data = request.get_json()
+    food = data.get('food', {})
+    text = data.get('text', '').strip()
+    
+    prompt = f"""You are a nutrition expert.
+I have this food item and its current macros:
+{json.dumps(food, indent=2)}
+
+The user says: "{text}"
+
+Update the portion and macros based on the user's feedback.
+Return ONLY a valid JSON object matching the exact structure above. No explanation, no markdown.
+"""
+    try:
+        response = gemini_client.models.generate_content(
+            model='gemini-3.6-flash',
+            contents=[prompt],
+        )
+        raw = response.text.strip()
+        for fence in ('```json', '```'):
+            if fence in raw:
+                raw = raw.split(fence, 1)[1].rsplit('```', 1)[0].strip()
+                break
+        updated_food = json.loads(raw)
+        return jsonify({'success': True, 'food': updated_food})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/log', methods=['POST'])
 def log_meal():
     data = request.get_json()
