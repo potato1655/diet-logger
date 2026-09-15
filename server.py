@@ -296,6 +296,52 @@ def auth_status():
     return jsonify({'authenticated': False})
 
 
+@app.route('/debug/fit')
+def debug_fit():
+    creds = load_credentials()
+    if not creds or not creds.valid:
+        return jsonify({'error': 'Not authenticated'})
+    
+    headers = {'Authorization': f'Bearer {creds.token}'}
+    # List all data sources
+    ds_resp = http_requests.get('https://www.googleapis.com/fitness/v1/users/me/dataSources', headers=headers)
+    
+    # Try fetching the last 24 hours of nutrition data
+    end_ns = ns_now()
+    start_ns = end_ns - (24 * 60 * 60 * 1000000000)
+    ds_id = 'raw:com.google.nutrition:diet_logger'
+    
+    # Since we don't know the exact ds_id (it might have the project ID in it), let's search dataSources
+    ds_list = ds_resp.json().get('dataSource', [])
+    actual_ds_id = None
+    for d in ds_list:
+        if 'diet_logger' in d.get('dataStreamId', ''):
+            actual_ds_id = d.get('dataStreamId')
+            break
+            
+    dataset = None
+    if actual_ds_id:
+        dataset_url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{actual_ds_id}/datasets/{start_ns}-{end_ns}'
+        dataset_resp = http_requests.get(dataset_url, headers=headers)
+        dataset = dataset_resp.json()
+        
+    # Also fetch aggregated nutrition to see if Google Fit recognized it
+    agg_body = {
+      "aggregateBy": [{ "dataTypeName": "com.google.nutrition" }],
+      "bucketByTime": { "durationMillis": 86400000 },
+      "startTimeMillis": int(start_ns / 1e6),
+      "endTimeMillis": int(end_ns / 1e6)
+    }
+    agg_resp = http_requests.post('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', headers=headers, json=agg_body)
+
+    return jsonify({
+        'dataSources_count': len(ds_list),
+        'diet_logger_ds_id': actual_ds_id,
+        'dataset': dataset,
+        'aggregated': agg_resp.json()
+    })
+
+
 import time
 
 def call_gemini_with_retry(prompt, img_bytes=None):
