@@ -667,14 +667,17 @@ def delete_log():
         
     for f in foods_to_delete:
         dset = f.get('_delete_dataset')
-        origin = f.get('_delete_ds')
         
         if dset:
-            url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{dset}'
+            start_ns = dset.split('-')[0]
+            # Surgically delete a 1-nanosecond window exactly at the start time
+            # This prevents accidental deletion of other meals that overlap the 15-minute window
+            surgical_dset = f"{start_ns}-{int(start_ns) + 1}"
+            
+            url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{surgical_dset}'
             r = http_requests.delete(url, headers=headers)
             if r.status_code not in (200, 204):
-                # Maybe they tried to delete a point from a different app
-                errors.append(f"Could not delete (is it from another app?): {r.text}")
+                errors.append(f"Could not delete: {r.text}")
                 
     if errors:
         return jsonify({'success': False, 'error': '; '.join(errors)}), 500
