@@ -3,6 +3,139 @@ let currentFoods   = [];
 let selectedMeal   = 'Lunch';
 let currentImageB64 = null;
 
+// ── Daily Targets (Male 19-21, Weight Gain Plan) ──────────────────────────
+const DAILY_TARGETS = {
+  macros: {
+    calories:  { label: 'Calories',  target: 2350,  unit: 'kcal' },
+    protein_g: { label: 'Protein',   target: 130,   unit: 'g' },
+    carbs_g:   { label: 'Carbs',     target: 295,   unit: 'g' },
+    fat_g:     { label: 'Fat',       target: 73,    unit: 'g' },
+    fiber_g:   { label: 'Fiber',     target: 38,    unit: 'g' },
+  },
+  micros: {
+    // Vitamins
+    vitamin_a_iu:     { label: 'Vitamin A',      target: 3000,  unit: 'IU'  },  // 900mcg ≈ 3000 IU
+    vitamin_c_mg:     { label: 'Vitamin C',      target: 90,    unit: 'mg'  },
+    vitamin_d_iu:     { label: 'Vitamin D',      target: 600,   unit: 'IU'  },
+    vitamin_e_mg:     { label: 'Vitamin E',      target: 15,    unit: 'mg'  },
+    vitamin_k_mcg:    { label: 'Vitamin K',      target: 120,   unit: 'mcg' },
+    thiamin_mg:       { label: 'Thiamin (B1)',   target: 1.2,   unit: 'mg'  },
+    riboflavin_mg:    { label: 'Riboflavin (B2)',target: 1.3,   unit: 'mg'  },
+    niacin_mg:        { label: 'Niacin (B3)',    target: 16,    unit: 'mg'  },
+    vitamin_b6_mg:    { label: 'Vitamin B6',     target: 1.3,   unit: 'mg'  },
+    folate_mcg:       { label: 'Folate (B9)',    target: 400,   unit: 'mcg' },
+    vitamin_b12_mcg:  { label: 'Vitamin B12',    target: 2.4,   unit: 'mcg' },
+    biotin_mcg:       { label: 'Biotin (B7)',    target: 30,    unit: 'mcg' },
+    pantothenic_mg:   { label: 'Pantothenic (B5)',target: 5,    unit: 'mg'  },
+    choline_mg:       { label: 'Choline',        target: 550,   unit: 'mg'  },
+    // Minerals
+    calcium_mg:       { label: 'Calcium',        target: 1000,  unit: 'mg'  },
+    iron_mg:          { label: 'Iron',           target: 8,     unit: 'mg'  },
+    magnesium_mg:     { label: 'Magnesium',      target: 400,   unit: 'mg'  },
+    phosphorus_mg:    { label: 'Phosphorus',     target: 700,   unit: 'mg'  },
+    potassium_mg:     { label: 'Potassium',      target: 3400,  unit: 'mg'  },
+    sodium_mg:        { label: 'Sodium',         target: 2300,  unit: 'mg', max: true },
+    zinc_mg:          { label: 'Zinc',           target: 11,    unit: 'mg'  },
+    selenium_mcg:     { label: 'Selenium',       target: 55,    unit: 'mcg' },
+    copper_mcg:       { label: 'Copper',         target: 900,   unit: 'mcg' },
+    manganese_mg:     { label: 'Manganese',      target: 2.3,   unit: 'mg'  },
+    chromium_mcg:     { label: 'Chromium',        target: 35,    unit: 'mcg' },
+    iodine_mcg:       { label: 'Iodine',         target: 150,   unit: 'mcg' },
+    // Essential fats
+    omega_3_g:        { label: 'Omega-3 (ALA)',  target: 1.6,   unit: 'g'   },
+    omega_6_g:        { label: 'Omega-6 (LA)',   target: 17,    unit: 'g'   },
+    epa_dha_mg:       { label: 'EPA + DHA',      target: 375,   unit: 'mg'  },
+  }
+};
+
+function renderDailyDashboard(meals) {
+  const container = document.getElementById('daily-dashboard');
+  if (!container) return;
+  
+  // Filter to today's meals only
+  const today = new Date();
+  const todayStr = today.toDateString();
+  const todayMeals = meals.filter(m => new Date(m.id).toDateString() === todayStr);
+  
+  if (todayMeals.length === 0) {
+    container.innerHTML = `<div class="dashboard-empty">No meals logged today yet</div>`;
+    return;
+  }
+  
+  // Sum macros
+  const sums = { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
+  const microSums = {};
+  
+  todayMeals.forEach(m => {
+    sums.calories  += m.totals?.calories  || 0;
+    sums.protein_g += m.totals?.protein_g || 0;
+    sums.carbs_g   += m.totals?.carbs_g   || 0;
+    sums.fat_g     += m.totals?.fat_g     || 0;
+    sums.fiber_g   += m.totals?.fiber_g   || 0;
+    
+    m.foods.forEach(f => {
+      if (f.micros) {
+        for (const [k, v] of Object.entries(f.micros)) {
+          microSums[k] = (microSums[k] || 0) + v;
+        }
+      }
+    });
+  });
+  
+  // Render macro progress bars
+  let macroHtml = '';
+  for (const [key, info] of Object.entries(DAILY_TARGETS.macros)) {
+    const current = Math.round(sums[key] || 0);
+    const pct = Math.min(Math.round((current / info.target) * 100), 100);
+    const over = current > info.target;
+    const barColor = key === 'calories' ? '#c8b888' :
+                     key === 'protein_g' ? '#7cb8e0' :
+                     key === 'carbs_g' ? '#d8a850' :
+                     key === 'fat_g' ? '#c8b090' : '#4a9e6e';
+    macroHtml += `
+      <div class="dash-macro">
+        <div class="dash-macro-header">
+          <span class="dash-macro-label">${info.label}</span>
+          <span class="dash-macro-value">${current}<span class="dash-macro-unit"> / ${info.target}${info.unit}</span></span>
+        </div>
+        <div class="dash-progress-track">
+          <div class="dash-progress-fill ${over ? 'over' : ''}" style="width:${pct}%; background:${barColor}"></div>
+        </div>
+      </div>`;
+  }
+  
+  // Render micro progress (only the ones that have data)
+  let microHtml = '';
+  const microEntries = Object.entries(DAILY_TARGETS.micros).filter(([k]) => (microSums[k] || 0) > 0);
+  
+  if (microEntries.length > 0) {
+    microHtml = `<div class="dash-section-label">MICRONUTRIENTS</div><div class="dash-micros-grid">`;
+    for (const [key, info] of microEntries) {
+      const current = Math.round((microSums[key] || 0) * 10) / 10;
+      const pct = Math.min(Math.round((current / info.target) * 100), 100);
+      const colorClass = pct >= 100 ? 'complete' : pct >= 50 ? 'partial' : 'low';
+      microHtml += `
+        <div class="dash-micro-item">
+          <div class="dash-micro-top">
+            <span class="dash-micro-label">${info.label}</span>
+            <span class="dash-micro-pct ${colorClass}">${pct}%</span>
+          </div>
+          <div class="dash-micro-track">
+            <div class="dash-micro-fill ${colorClass}" style="width:${pct}%"></div>
+          </div>
+          <div class="dash-micro-val">${current} / ${info.target} ${info.unit}</div>
+        </div>`;
+    }
+    microHtml += `</div>`;
+  }
+  
+  container.innerHTML = `
+    <div class="dash-section-label">TODAY'S PROGRESS</div>
+    <div class="dash-macros">${macroHtml}</div>
+    ${microHtml}
+  `;
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
   await checkAuth();
@@ -375,6 +508,7 @@ async function loadHistory() {
     const res  = await fetch('/history');
     const data = await res.json();
     historyData = data;
+    renderDailyDashboard(data);
     if (data.length === 0) {
       list.innerHTML = '<p class="empty-msg">No meals logged yet.</p>';
       return;

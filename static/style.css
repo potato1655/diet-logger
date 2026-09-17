@@ -385,3 +385,89 @@ main { flex: 1; overflow-y: auto; padding: 1rem; padding-bottom: 80px; }
   border: none; border-radius: var(--radius-sm); cursor: pointer;
   font-family: inherit;
 }
+
+/* ── Daily Dashboard ── */
+#daily-dashboard { margin-bottom: 1.25rem; }
+
+.dashboard-empty {
+  text-align: center; color: var(--text-dim); padding: 1.25rem;
+  font-size: .85rem; background: var(--card); border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.dash-section-label {
+  font-size: .72rem; font-weight: 600; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: .6rem; margin-top: .2rem;
+}
+
+.dash-macros {
+  background: var(--card); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius); padding: .85rem 1rem;
+  display: flex; flex-direction: column; gap: .65rem;
+  margin-bottom: 1rem;
+}
+
+.dash-macro-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: .25rem;
+}
+.dash-macro-label {
+  font-weight: 600; font-size: .85rem; color: var(--text);
+}
+.dash-macro-value {
+  font-weight: 700; font-size: .9rem; color: var(--text);
+}
+.dash-macro-unit {
+  font-weight: 400; font-size: .75rem; color: var(--text-muted);
+}
+
+.dash-progress-track {
+  width: 100%; height: 6px; background: var(--bg);
+  border-radius: 3px; overflow: hidden;
+}
+.dash-progress-fill {
+  height: 100%; border-radius: 3px;
+  transition: width .4s ease;
+}
+.dash-progress-fill.over { opacity: .85; }
+
+/* Micro grid */
+.dash-micros-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: .5rem; margin-bottom: .5rem;
+}
+
+.dash-micro-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: .55rem .65rem;
+}
+.dash-micro-top {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: .25rem;
+}
+.dash-micro-label { font-size: .72rem; color: var(--text-muted); font-weight: 500; }
+.dash-micro-pct {
+  font-size: .7rem; font-weight: 700; border-radius: 999px;
+  padding: .1rem .35rem;
+}
+.dash-micro-pct.complete { color: #4a9e6e; background: rgba(74,158,110,.12); }
+.dash-micro-pct.partial  { color: #d8a850; background: rgba(216,168,80,.12); }
+.dash-micro-pct.low      { color: #e55b5b; background: rgba(229,91,91,.12); }
+
+.dash-micro-track {
+  width: 100%; height: 3px; background: var(--bg);
+  border-radius: 2px; overflow: hidden; margin-bottom: .2rem;
+}
+.dash-micro-fill {
+  height: 100%; border-radius: 2px;
+  transition: width .4s ease;
+}
+.dash-micro-fill.complete { background: #4a9e6e; }
+.dash-micro-fill.partial  { background: #d8a850; }
+.dash-micro-fill.low      { background: #e55b5b; }
+
+.dash-micro-val {
+  font-size: .65rem; color: var(--text-dim);
+}
