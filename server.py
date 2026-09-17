@@ -196,8 +196,8 @@ def log_to_google_fit(foods, meal_type):
     errors = []
 
     for food in foods:
-        start_ns = ns_now()
-        end_ns = start_ns + 1  # instant point
+        end_ns = ns_now()
+        start_ns = end_ns - int(15 * 60 * 1e9)  # 15 minutes prior
 
         point = {
             'dataTypeName': 'com.google.nutrition',

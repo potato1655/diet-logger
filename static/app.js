@@ -370,7 +370,7 @@ async function loadHistory() {
           <span class="history-meal">${entry.meal_type}</span>
           <span class="history-cals">${Math.round(entry.totals.calories)} kcal</span>
         </div>
-        <div class="history-time">${entry.date} at ${entry.time}</div>
+        <div class="history-time">${new Date(entry.id).toLocaleDateString()} at ${new Date(entry.id).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
         <div class="history-foods">${entry.foods.map(f => f.name).join(' · ')}</div>
         <div class="history-macros">
           <span class="macro-pill">🥩 ${entry.totals.protein_g}g</span>
