@@ -524,22 +524,46 @@ async function loadHistory() {
         `<div class="history-food-item">${f.quantity ? f.quantity + ' ' : ''}${f.name}</div>`
       ).join('');
       
-      // Build nutrients grid from micros
-      let nutrientsHtml = '';
+      // Aggregate micros for the entire meal
+      let mealMicros = {};
       entry.foods.forEach(f => {
-        if (f.micros && Object.keys(f.micros).length > 0) {
-          let items = '';
+        if (f.micros) {
           for (const [k, v] of Object.entries(f.micros)) {
-            if (v > 0) {
-              let label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-              items += `<div class="nutrient-item"><span class="nutrient-label">${label}</span><span class="nutrient-value">${v}</span></div>`;
-            }
-          }
-          if (items) {
-            nutrientsHtml += `<div class="nutrients-grid">${items}</div>`;
+            mealMicros[k] = (mealMicros[k] || 0) + v;
           }
         }
       });
+      
+      let nutrientsHtml = '';
+      if (Object.keys(mealMicros).length > 0) {
+        let items = '';
+        for (const [key, value] of Object.entries(mealMicros)) {
+          if (value > 0) {
+            // Round to 1 decimal place to fix float precision errors
+            const roundedVal = Math.round(value * 10) / 10;
+            
+            // Clean up label (e.g. "vitamin_b6_mg" -> "Vitamin B6")
+            let label = key.replace(/_[a-z]+$/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            
+            // Check if we have a target to show a visual pill
+            let targetInfo = DAILY_TARGETS.micros[key];
+            let pillHtml = '';
+            if (targetInfo) {
+              const pct = Math.min(Math.round((value / targetInfo.target) * 100), 100);
+              const colorClass = pct >= 100 ? 'complete' : pct >= 50 ? 'partial' : 'low';
+              pillHtml = `<span class="dash-micro-pct ${colorClass}" style="margin-left:6px; font-size:0.65rem;">${pct}%</span>`;
+            }
+            
+            items += `<div class="nutrient-item">
+              <span class="nutrient-label">${label}</span>
+              <span class="nutrient-value">${roundedVal}${pillHtml}</span>
+            </div>`;
+          }
+        }
+        if (items) {
+          nutrientsHtml = `<div class="nutrients-grid">${items}</div>`;
+        }
+      }
       
       return `
       <div class="history-card" id="history-entry-${entry.id}">

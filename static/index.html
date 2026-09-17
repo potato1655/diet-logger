@@ -36,6 +36,8 @@
     <!-- ── LOG TAB ── -->
     <section id="tab-log" class="tab-content active">
 
+      <div id="daily-dashboard"></div>
+
       <!-- Upload area -->
       <div class="upload-area">
         <div id="preview-container">
@@ -108,7 +110,6 @@
 
     <!-- ── HISTORY TAB ── -->
     <section id="tab-history" class="tab-content">
-      <div id="daily-dashboard"></div>
       <h2 class="history-title">Past Meals</h2>
       <div id="history-list"><p class="empty-msg">No meals logged yet.</p></div>
     </section>
@@ -127,7 +128,7 @@
 
 </div>
 
-<script src="/app.js?v=11"></script>
+<script src="/app.js?v=12"></script>
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
