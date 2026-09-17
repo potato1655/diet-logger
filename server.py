@@ -571,6 +571,7 @@ def history():
     
     r = http_requests.get(url, headers=headers)
     if r.status_code != 200:
+        print(f"Error fetching history from Google Fit: {r.status_code} - {r.text}")
         return jsonify([])
         
     points = r.json().get('point', [])
@@ -679,6 +680,22 @@ def delete_log():
         return jsonify({'success': False, 'error': '; '.join(errors)}), 500
         
     return jsonify({'success': True})
+
+
+@app.route('/debug/fit')
+def debug_fit():
+    creds = load_credentials()
+    if not creds or not creds.valid:
+        return "Not authenticated", 401
+    
+    headers = {'Authorization': f'Bearer {creds.token}'}
+    end_ns = ns_now()
+    start_ns = end_ns - int(30 * 24 * 60 * 60 * 1e9)
+    merged_ds = "derived:com.google.nutrition:com.google.android.gms:merged"
+    url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{merged_ds}/datasets/{start_ns}-{end_ns}'
+    
+    r = http_requests.get(url, headers=headers)
+    return jsonify(r.json())
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
