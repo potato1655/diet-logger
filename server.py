@@ -546,10 +546,6 @@ def log_meal():
         'fit_dataset_ids': fit_dataset_ids,
     }
 
-    log = load_log()
-    log.append(entry)
-    save_log(log)
-
     return jsonify({
         'success':      True,
         'local_saved':  True,
@@ -561,36 +557,120 @@ def log_meal():
 
 @app.route('/history')
 def history():
-    log = load_log()
-    return jsonify(list(reversed(log)))
-
-
-@app.route('/log/<entry_id>', methods=['DELETE'])
-def delete_log(entry_id):
-    log = load_log()
+    creds = load_credentials()
+    if not creds or not creds.valid:
+        return jsonify([])
     
-    entry_idx = next((i for i, e in enumerate(log) if e.get('id') == entry_id), None)
-    if entry_idx is None:
-        return jsonify({'success': False, 'error': 'Entry not found'}), 404
+    headers = {'Authorization': f'Bearer {creds.token}'}
+    
+    end_ns = ns_now()
+    start_ns = end_ns - int(7 * 24 * 60 * 60 * 1000000000)
+    
+    merged_ds = "derived:com.google.nutrition:com.google.android.gms:merged"
+    url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{merged_ds}/datasets/{start_ns}-{end_ns}'
+    
+    r = http_requests.get(url, headers=headers)
+    if r.status_code != 200:
+        return jsonify([])
         
-    entry = log.pop(entry_idx)
-    save_log(log)
+    points = r.json().get('point', [])
+    meals = []
     
-    # Try to delete from Google Fit
-    dataset_ids = entry.get('fit_dataset_ids', [])
-    if dataset_ids:
-        creds = load_credentials()
-        if creds and creds.valid:
-            headers = {'Authorization': f'Bearer {creds.token}'}
-            try:
-                ds_id = ensure_data_source(headers)
-                for did in dataset_ids:
-                    url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{did}'
-                    http_requests.delete(url, headers=headers)
-            except Exception as e:
-                print('Error deleting from Google Fit:', e)
-                pass
+    for p in points:
+        p_start = int(p.get('startTimeNanos', 0))
+        p_end = int(p.get('endTimeNanos', 0))
+        
+        vals = p.get('value', [])
+        if len(vals) < 3:
+            continue
+            
+        nutrients = vals[0].get('mapVal', [])
+        meal_type_int = vals[1].get('intVal', 2)
+        food_name = vals[2].get('stringVal', 'Unknown Food')
+        
+        rev_meal_map = {1: 'Breakfast', 2: 'Lunch', 3: 'Dinner', 4: 'Snack', 5: 'Other'}
+        meal_type_str = rev_meal_map.get(meal_type_int, 'Other')
+        
+        food_obj = {'name': food_name}
+        for n in nutrients:
+            k = n.get('key')
+            v = n.get('value', {}).get('fpVal', 0)
+            if k == 'calories': food_obj['calories'] = v
+            elif k == 'protein': food_obj['protein_g'] = v
+            elif k == 'fat.total': food_obj['fat_g'] = v
+            elif k == 'carbs.total': food_obj['carbs_g'] = v
+            elif k == 'dietary_fiber': food_obj['fiber_g'] = v
+            elif k == 'sugar': food_obj['sugar_g'] = v
+            elif k == 'cholesterol': food_obj['cholesterol_mg'] = v
+            elif k == 'sodium': food_obj['sodium_mg'] = v
+            elif k == 'potassium': food_obj['potassium_mg'] = v
+            elif k == 'vitamin_a': food_obj['vitamin_a_iu'] = v
+            elif k == 'vitamin_c': food_obj['vitamin_c_mg'] = v
+            elif k == 'calcium': food_obj['calcium_mg'] = v
+            elif k == 'iron': food_obj['iron_mg'] = v
+            
+        food_obj['_delete_ds'] = p.get('originDataSourceId')
+        food_obj['_delete_dataset'] = f"{p_start}-{p_end}"
+        
+        matched_meal = None
+        for m in meals:
+            if m['meal_type'] == meal_type_str and abs(m['_base_ns'] - p_start) < (300 * 1e9):
+                matched_meal = m
+                break
+                
+        if matched_meal:
+            matched_meal['foods'].append(food_obj)
+        else:
+            iso_time = datetime.fromtimestamp(p_start / 1e9, timezone.utc).isoformat()
+            meals.append({
+                'id': iso_time,
+                '_base_ns': p_start,
+                'meal_type': meal_type_str,
+                'foods': [food_obj],
+            })
 
+    meals.sort(key=lambda x: x['_base_ns'], reverse=True)
+    
+    for m in meals:
+        totals = {'calories': 0, 'protein_g': 0, 'carbs_g': 0, 'fat_g': 0, 'fiber_g': 0}
+        for f in m['foods']:
+            totals['calories'] += f.get('calories', 0)
+            totals['protein_g'] += f.get('protein_g', 0)
+            totals['carbs_g'] += f.get('carbs_g', 0)
+            totals['fat_g'] += f.get('fat_g', 0)
+            totals['fiber_g'] += f.get('fiber_g', 0)
+        
+        for k in totals:
+            totals[k] = round(totals[k], 1)
+        m['totals'] = totals
+
+    return jsonify(meals)
+
+
+@app.route('/log/delete', methods=['POST'])
+def delete_log():
+    data = request.get_json()
+    foods_to_delete = data.get('foods', [])
+    
+    creds = load_credentials()
+    if not creds or not creds.valid:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        
+    headers = {'Authorization': f'Bearer {creds.token}'}
+    errors = []
+    
+    for f in foods_to_delete:
+        ds = f.get('_delete_ds')
+        dset = f.get('_delete_dataset')
+        if ds and dset:
+            url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds}/datasets/{dset}'
+            r = http_requests.delete(url, headers=headers)
+            if r.status_code not in (200, 204):
+                errors.append(f"Failed to delete: {r.text}")
+                
+    if errors:
+        return jsonify({'success': False, 'error': '; '.join(errors)}), 500
+        
     return jsonify({'success': True})
 
 

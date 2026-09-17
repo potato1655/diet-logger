@@ -355,12 +355,15 @@ function resetLog() {
 }
 
 // ── History ───────────────────────────────────────────────────────────────
+let historyData = [];
+
 async function loadHistory() {
   const list = document.getElementById('history-list');
   list.innerHTML = '<p class="empty-msg">Loading...</p>';
   try {
     const res  = await fetch('/history');
     const data = await res.json();
+    historyData = data;
     if (data.length === 0) {
       list.innerHTML = '<p class="empty-msg">No meals logged yet.</p>';
       return;
@@ -411,16 +414,25 @@ async function loadHistory() {
 }
 
 async function deleteEntry(id) {
+    const entry = historyData.find(e => e.id === id);
+    if (!entry) return;
+    
     if (!confirm('Are you sure you want to delete this meal? This will remove it from Google Fit as well.')) return;
     
     document.getElementById(`history-entry-${id}`).style.opacity = '0.5';
     
     try {
-        const res = await fetch(`/log/${id}`, { method: 'DELETE' });
+        const res = await fetch('/log/delete', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ foods: entry.foods })
+        });
+        
         if (res.ok) {
             loadHistory();
         } else {
-            alert('Failed to delete meal');
+            const data = await res.json();
+            alert('Failed to delete meal: ' + data.error);
             document.getElementById(`history-entry-${id}`).style.opacity = '1';
         }
     } catch (e) {
