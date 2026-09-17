@@ -659,14 +659,21 @@ def delete_log():
     headers = {'Authorization': f'Bearer {creds.token}'}
     errors = []
     
+    try:
+        ds_id = ensure_data_source(headers)
+    except Exception as e:
+        return jsonify({'success': False, 'error': f"Failed to get app data source: {e}"}), 500
+        
     for f in foods_to_delete:
-        ds = f.get('_delete_ds')
         dset = f.get('_delete_dataset')
-        if ds and dset:
-            url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds}/datasets/{dset}'
+        origin = f.get('_delete_ds')
+        
+        if dset:
+            url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{dset}'
             r = http_requests.delete(url, headers=headers)
             if r.status_code not in (200, 204):
-                errors.append(f"Failed to delete: {r.text}")
+                # Maybe they tried to delete a point from a different app
+                errors.append(f"Could not delete (is it from another app?): {r.text}")
                 
     if errors:
         return jsonify({'success': False, 'error': '; '.join(errors)}), 500
