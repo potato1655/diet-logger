@@ -2,7 +2,7 @@ import os
 import json
 import base64
 import socket
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from io import BytesIO
 
 from flask import Flask, request, jsonify, redirect, session, send_from_directory
@@ -172,15 +172,15 @@ def ensure_data_source(headers):
     raise RuntimeError(f'Could not create data source: {r.text}')
 
 
-def log_to_google_fit(foods, meal_type):
+def log_to_google_fit(foods, meal_type, time_str=None):
     """Push each food item as a nutrition data point to Google Fit."""
     creds = load_credentials()
     if not creds:
-        return False, 'Not authenticated: credentials file missing.'
+        return False, 'Not authenticated: credentials file missing.', []
     if not creds.valid:
         if creds.expired and not creds.refresh_token:
-            return False, 'Not authenticated: token expired and no refresh token available. Please sign in again.'
-        return False, f'Not authenticated: creds.valid={creds.valid}, expired={creds.expired}, has_refresh={bool(creds.refresh_token)}'
+            return False, 'Not authenticated: token expired and no refresh token available. Please sign in again.', []
+        return False, f'Not authenticated: creds.valid={creds.valid}, expired={creds.expired}, has_refresh={bool(creds.refresh_token)}', []
 
     headers = {
         'Authorization': f'Bearer {creds.token}',
@@ -190,16 +190,31 @@ def log_to_google_fit(foods, meal_type):
     try:
         ds_id = ensure_data_source(headers)
     except RuntimeError as e:
-        return False, str(e)
+        return False, str(e), []
 
     meal_int = MEAL_TYPE_MAP.get(meal_type, 2)
     errors = []
-
     dataset_ids = []
     
-    for food in foods:
-        end_ns = ns_now()
-        start_ns = end_ns - int(15 * 60 * 1e9)  # 15 minutes prior
+    # Calculate base timestamp from time_str if provided
+    base_time = datetime.now(timezone.utc)
+    if time_str:
+        try:
+            h, m = map(int, time_str.split(':'))
+            # Combine current local date with the provided local time, then convert to UTC
+            local_now = datetime.now()
+            local_meal_time = local_now.replace(hour=h, minute=m, second=0, microsecond=0)
+            base_time = local_meal_time.astimezone(timezone.utc)
+        except Exception:
+            pass
+
+    for i, food in enumerate(foods):
+        # Stagger each food item by a few milliseconds so they don't have identical start_ns (avoid overlap bugs)
+        end_time = base_time + timedelta(milliseconds=i)
+        start_time = end_time - timedelta(minutes=15)
+        
+        end_ns = int(end_time.timestamp() * 1e9)
+        start_ns = int(start_time.timestamp() * 1e9)
 
         point = {
             'dataTypeName': 'com.google.nutrition',
@@ -534,12 +549,23 @@ def log_meal():
         'fiber_g':   round(sum(f.get('fiber_g',    0) for f in foods), 1),
     }
 
-    health_ok, health_msg, fit_dataset_ids = log_to_google_fit(foods, meal_type)
+    time_str = data.get('time') # Optional, e.g. "14:30"
+    health_ok, health_msg, fit_dataset_ids = log_to_google_fit(foods, meal_type, time_str)
     
+    base_time = datetime.now(timezone.utc)
+    if time_str:
+        try:
+            h, m = map(int, time_str.split(':'))
+            local_now = datetime.now()
+            local_meal_time = local_now.replace(hour=h, minute=m, second=0, microsecond=0)
+            base_time = local_meal_time.astimezone(timezone.utc)
+        except Exception:
+            pass
+            
     entry = {
-        'id':        datetime.now(timezone.utc).isoformat(),
+        'id':        base_time.isoformat(),
         'date':      datetime.now().strftime('%Y-%m-%d'),
-        'time':      datetime.now().strftime('%H:%M'),
+        'time':      time_str or datetime.now().strftime('%H:%M'),
         'meal_type': meal_type,
         'foods':     foods,
         'totals':    totals,

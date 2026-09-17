@@ -16,6 +16,11 @@ window.addEventListener('load', async () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.warn);
   }
+
+  // Set default meal time to now
+  const now = new Date();
+  const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  document.getElementById('meal-time').value = timeStr;
 });
 
 // ── Auth ──────────────────────────────────────────────────────────────────
@@ -309,11 +314,17 @@ async function logMeal() {
   btn.textContent = 'Logging...';
   btn.disabled = true;
 
+  const timeVal = document.getElementById('meal-time').value; // e.g. "14:30"
+  
   try {
     const res  = await fetch('/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ foods: currentFoods, meal_type: selectedMeal }),
+      body: JSON.stringify({ 
+          foods: currentFoods, 
+          meal_type: selectedMeal,
+          time: timeVal
+      }),
     });
     const data = await res.json();
 
