@@ -129,13 +129,15 @@ def ensure_data_source(headers):
     Create the custom nutrition data source in Google Fit if it doesn't exist yet.
     Returns the data source ID.
     """
-    ds_id = 'raw:com.google.nutrition:diet_logger'
-    url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}'
-    r = http_requests.get(url, headers=headers)
-    if r.status_code == 200:
-        return ds_id  # already exists
+    # First, list data sources to see if it already exists with a project ID suffix
+    ds_resp = http_requests.get('https://www.googleapis.com/fitness/v1/users/me/dataSources', headers=headers)
+    if ds_resp.status_code == 200:
+        for d in ds_resp.json().get('dataSource', []):
+            if 'diet_logger' in d.get('dataStreamId', ''):
+                return d.get('dataStreamId')
 
-    # Create it
+    # If not found, attempt to create it
+    ds_id = 'raw:com.google.nutrition:diet_logger'
     body = {
         'dataStreamName': 'diet_logger',
         'type': 'raw',
@@ -156,6 +158,17 @@ def ensure_data_source(headers):
     )
     if r.status_code in (200, 201):
         return r.json().get('dataStreamId', ds_id)
+    
+    # If we get a 409 Conflict, it exists but we missed it in the list (or it was just created)
+    # The error message looks like: "Data Source: raw:com.google.nutrition:1234:diet_logger already exists"
+    if r.status_code == 409:
+        err_msg = r.json().get('error', {}).get('message', '')
+        if 'already exists' in err_msg:
+            # Extract the raw ID from the error message
+            parts = err_msg.split('Data Source: ')
+            if len(parts) > 1:
+                return parts[1].split(' already exists')[0].strip()
+            
     raise RuntimeError(f'Could not create data source: {r.text}')
 
 
