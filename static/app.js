@@ -379,47 +379,62 @@ async function loadHistory() {
       list.innerHTML = '<p class="empty-msg">No meals logged yet.</p>';
       return;
     }
-    list.innerHTML = data.map(entry => `
+    list.innerHTML = data.map(entry => {
+      const mealIcons = { Breakfast: '☀️', Lunch: '🍽️', Dinner: '🌙', Snack: '🍎', Other: '📋' };
+      const icon = mealIcons[entry.meal_type] || '📋';
+      const d = new Date(entry.id);
+      const timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      const dateStr = d.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'});
+      
+      const foodList = entry.foods.map(f => 
+        `<div class="history-food-item">${f.quantity ? f.quantity + ' ' : ''}${f.name}</div>`
+      ).join('');
+      
+      // Build nutrients grid from micros
+      let nutrientsHtml = '';
+      entry.foods.forEach(f => {
+        if (f.micros && Object.keys(f.micros).length > 0) {
+          let items = '';
+          for (const [k, v] of Object.entries(f.micros)) {
+            if (v > 0) {
+              let label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+              items += `<div class="nutrient-item"><span class="nutrient-label">${label}</span><span class="nutrient-value">${v}</span></div>`;
+            }
+          }
+          if (items) {
+            nutrientsHtml += `<div class="nutrients-grid">${items}</div>`;
+          }
+        }
+      });
+      
+      return `
       <div class="history-card" id="history-entry-${entry.id}">
-        <div class="history-header">
-          <div>
-            <span class="history-meal">${entry.meal_type}</span>
-            <span class="history-time" style="margin-left:8px; font-size:0.85rem;">
-                ${new Date(entry.id).toLocaleDateString()} at ${new Date(entry.id).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-            </span>
+        <div class="history-card-inner">
+          <div class="history-header">
+            <div class="history-meal-info">
+              <div class="history-meal-icon">${icon}</div>
+              <div class="history-meal-text">
+                <span class="history-meal">${entry.meal_type}</span>
+                <span class="history-time">${dateStr} · ${timeStr}</span>
+              </div>
+            </div>
+            <div class="history-pills">
+              <span class="macro-pill macro-pill-kcal">${Math.round(entry.totals.calories)} kcal</span>
+              <span class="macro-pill macro-pill-pro">${entry.totals.protein_g}g P</span>
+              <span class="macro-pill macro-pill-carb">${entry.totals.carbs_g}g C</span>
+              <span class="macro-pill macro-pill-fat">${entry.totals.fat_g}g F</span>
+              <button onclick="deleteEntry('${entry.id}')" class="btn-delete-meal" title="Delete Meal">🗑️</button>
+            </div>
           </div>
-          <div>
-            <span class="history-cals">${Math.round(entry.totals.calories)} kcal</span>
-            <button onclick="deleteEntry('${entry.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; margin-left: 8px;" title="Delete Meal">🗑️</button>
-          </div>
+          <div class="history-foods">${foodList}</div>
+          ${nutrientsHtml ? `
+          <details class="nutrients-dropdown">
+            <summary>Show full nutrients</summary>
+            ${nutrientsHtml}
+          </details>` : ''}
         </div>
-        <div class="history-foods">${entry.foods.map(f => f.name).join(' · ')}</div>
-        <div class="history-macros">
-          <span class="macro-pill">🥩 ${entry.totals.protein_g}g</span>
-          <span class="macro-pill">🍞 ${entry.totals.carbs_g}g</span>
-          <span class="macro-pill">🧈 ${entry.totals.fat_g}g</span>
-        </div>
-        <details style="margin-top: 8px; font-size: 0.85rem; color: #64748b;">
-          <summary style="cursor: pointer; font-weight: 500;">Show full nutrients</summary>
-          <div style="margin-top: 4px; padding: 4px; background: rgba(0,0,0,0.02); border-radius: 4px;">
-            ${entry.foods.map(f => {
-                let microsStr = [];
-                if (f.fiber_g) microsStr.push(`Fiber: ${f.fiber_g}g`);
-                
-                if (f.micros) {
-                    for (const [k, v] of Object.entries(f.micros)) {
-                        // Format the key to be readable, e.g. "vitamin_a_iu" -> "Vitamin A Iu"
-                        let label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                        microsStr.push(`${label}: ${v}`);
-                    }
-                }
-                
-                return microsStr.length > 0 ? `<b>${f.name}</b>: ${microsStr.join(', ')}` : '';
-            }).filter(s => s).join('<br>')}
-          </div>
-        </details>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   } catch (e) {
     list.innerHTML = '<p class="empty-msg">Could not load history.</p>';
   }

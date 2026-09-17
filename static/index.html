@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#16a34a" />
+  <meta name="theme-color" content="#141414" />
   <title>Diet Logger</title>
   <link rel="manifest" href="/manifest.json" />
   <link rel="stylesheet" href="/style.css" />
@@ -66,9 +66,9 @@
       </div>
 
       <!-- Meal time -->
-      <div class="form-group time-group" style="margin-top: 10px;">
-        <label for="meal-time">Meal Time:</label>
-        <input type="time" id="meal-time" style="padding: 8px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit;">
+      <div class="form-group time-group">
+        <label for="meal-time">Meal Time</label>
+        <input type="time" id="meal-time">
       </div>
 
       <!-- Analyze button -->
@@ -126,7 +126,7 @@
 
 </div>
 
-<script src="/app.js?v=9"></script>
+<script src="/app.js?v=10"></script>
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
