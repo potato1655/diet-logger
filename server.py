@@ -195,6 +195,8 @@ def log_to_google_fit(foods, meal_type):
     meal_int = MEAL_TYPE_MAP.get(meal_type, 2)
     errors = []
 
+    dataset_ids = []
+    
     for food in foods:
         end_ns = ns_now()
         start_ns = end_ns - int(15 * 60 * 1e9)  # 15 minutes prior
@@ -217,8 +219,28 @@ def log_to_google_fit(foods, meal_type):
                 {'stringVal': food.get('name', 'Unknown')},
             ],
         }
+        
+        # Dynamically add micronutrients if present and > 0
+        if float(food.get('sugar_g', 0)) > 0:
+            point['value'][0]['mapVal'].append({'key': 'sugar', 'value': {'fpVal': float(food['sugar_g'])}})
+        if float(food.get('cholesterol_mg', 0)) > 0:
+            point['value'][0]['mapVal'].append({'key': 'cholesterol', 'value': {'fpVal': float(food['cholesterol_mg'])}})
+        if float(food.get('sodium_mg', 0)) > 0:
+            point['value'][0]['mapVal'].append({'key': 'sodium', 'value': {'fpVal': float(food['sodium_mg'])}})
+        if float(food.get('potassium_mg', 0)) > 0:
+            point['value'][0]['mapVal'].append({'key': 'potassium', 'value': {'fpVal': float(food['potassium_mg'])}})
+        if float(food.get('vitamin_a_iu', 0)) > 0:
+            point['value'][0]['mapVal'].append({'key': 'vitamin_a', 'value': {'fpVal': float(food['vitamin_a_iu'])}})
+        if float(food.get('vitamin_c_mg', 0)) > 0:
+            point['value'][0]['mapVal'].append({'key': 'vitamin_c', 'value': {'fpVal': float(food['vitamin_c_mg'])}})
+        if float(food.get('calcium_mg', 0)) > 0:
+            point['value'][0]['mapVal'].append({'key': 'calcium', 'value': {'fpVal': float(food['calcium_mg'])}})
+        if float(food.get('iron_mg', 0)) > 0:
+            point['value'][0]['mapVal'].append({'key': 'iron', 'value': {'fpVal': float(food['iron_mg'])}})
 
         dataset_id = f'{start_ns}-{end_ns}'
+        dataset_ids.append(dataset_id)
+        
         url = (
             f'https://www.googleapis.com/fitness/v1/users/me'
             f'/dataSources/{ds_id}/datasets/{dataset_id}'
@@ -234,8 +256,8 @@ def log_to_google_fit(foods, meal_type):
             errors.append(f"{food.get('name')}: {r.text}")
 
     if errors:
-        return False, '; '.join(errors)
-    return True, 'Logged to Google Health successfully'
+        return False, '; '.join(errors), []
+    return True, 'Logged to Google Health successfully', dataset_ids
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -400,30 +422,39 @@ def analyze():
     image_b64 = data.get('image', '')
     extra_text = data.get('text', '').strip()
 
-    prompt = """You are a nutrition expert. Analyze this food image carefully.
+    prompt = """You are a nutrition expert. Analyze this image carefully.
+It may be a photo of food, a nutrition label, a multivitamin packet, or a screenshot of a food delivery receipt/order.
 
-List EVERY visible food item with realistic portion estimates and nutritional values.
-For Indian food (dal, rice, roti, sabzi, curry, etc.), use standard home-cooked portions.
-
-If you are unsure about any ingredients (e.g., is it ghee or oil? paneer or tofu?), ask brief clarifying questions.
+1. If it's a food photo, list EVERY visible food item with realistic portion estimates.
+2. If it's a receipt or order, list every food item ordered and estimate its macros based on standard restaurant portions.
+3. If it's a multivitamin or nutrition label, extract the exact vitamins and minerals listed.
 
 Return ONLY a valid JSON object matching this exact structure — no explanation, no markdown:
 {
   "foods": [
     {
-      "name": "Food name (be specific)",
+      "name": "Food/Pill name",
       "quantity": "Estimated amount",
       "calories": 300,
       "protein_g": 8.0,
       "carbs_g": 55.0,
       "fat_g": 5.0,
-      "fiber_g": 2.0
+      "fiber_g": 2.0,
+      "sugar_g": 0,
+      "cholesterol_mg": 0,
+      "sodium_mg": 0,
+      "potassium_mg": 0,
+      "vitamin_a_iu": 0,
+      "vitamin_c_mg": 0,
+      "calcium_mg": 0,
+      "iron_mg": 0
     }
   ],
   "questions": [
     "Is that ghee on the roti?"
   ]
 }
+Include the micronutrient fields (sugar, cholesterol, vitamins, etc.) even if they are 0.
 """
 
     if extra_text:
@@ -503,6 +534,8 @@ def log_meal():
         'fiber_g':   round(sum(f.get('fiber_g',    0) for f in foods), 1),
     }
 
+    health_ok, health_msg, fit_dataset_ids = log_to_google_fit(foods, meal_type)
+    
     entry = {
         'id':        datetime.now(timezone.utc).isoformat(),
         'date':      datetime.now().strftime('%Y-%m-%d'),
@@ -510,13 +543,12 @@ def log_meal():
         'meal_type': meal_type,
         'foods':     foods,
         'totals':    totals,
+        'fit_dataset_ids': fit_dataset_ids,
     }
 
     log = load_log()
     log.append(entry)
     save_log(log)
-
-    health_ok, health_msg = log_to_google_fit(foods, meal_type)
 
     return jsonify({
         'success':      True,
@@ -531,6 +563,35 @@ def log_meal():
 def history():
     log = load_log()
     return jsonify(list(reversed(log)))
+
+
+@app.route('/log/<entry_id>', methods=['DELETE'])
+def delete_log(entry_id):
+    log = load_log()
+    
+    entry_idx = next((i for i, e in enumerate(log) if e.get('id') == entry_id), None)
+    if entry_idx is None:
+        return jsonify({'success': False, 'error': 'Entry not found'}), 404
+        
+    entry = log.pop(entry_idx)
+    save_log(log)
+    
+    # Try to delete from Google Fit
+    dataset_ids = entry.get('fit_dataset_ids', [])
+    if dataset_ids:
+        creds = load_credentials()
+        if creds and creds.valid:
+            headers = {'Authorization': f'Bearer {creds.token}'}
+            try:
+                ds_id = ensure_data_source(headers)
+                for did in dataset_ids:
+                    url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{did}'
+                    http_requests.delete(url, headers=headers)
+            except Exception as e:
+                print('Error deleting from Google Fit:', e)
+                pass
+
+    return jsonify({'success': True})
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────

@@ -209,13 +209,13 @@ function toggleEdit(idx) {
 
 function saveEdit(idx) {
   currentFoods[idx] = {
+    ...currentFoods[idx],
     name:      document.getElementById(`edit-name-${idx}`).value,
     quantity:  document.getElementById(`edit-qty-${idx}`).value,
     calories:  parseFloat(document.getElementById(`edit-cal-${idx}`).value)  || 0,
     protein_g: parseFloat(document.getElementById(`edit-pro-${idx}`).value)  || 0,
     carbs_g:   parseFloat(document.getElementById(`edit-carb-${idx}`).value) || 0,
     fat_g:     parseFloat(document.getElementById(`edit-fat-${idx}`).value)  || 0,
-    fiber_g:   currentFoods[idx].fiber_g || 0,
   };
   renderFoods();
 }
@@ -226,6 +226,7 @@ async function refineFood(idx) {
   
   // Read current unsaved values from the form just in case they modified it
   const currentFood = {
+    ...currentFoods[idx],
     name:      document.getElementById(`edit-name-${idx}`).value,
     quantity:  document.getElementById(`edit-qty-${idx}`).value,
     calories:  parseFloat(document.getElementById(`edit-cal-${idx}`).value)  || 0,
@@ -365,23 +366,67 @@ async function loadHistory() {
       return;
     }
     list.innerHTML = data.map(entry => `
-      <div class="history-card">
+      <div class="history-card" id="history-entry-${entry.id}">
         <div class="history-header">
-          <span class="history-meal">${entry.meal_type}</span>
-          <span class="history-cals">${Math.round(entry.totals.calories)} kcal</span>
+          <div>
+            <span class="history-meal">${entry.meal_type}</span>
+            <span class="history-time" style="margin-left:8px; font-size:0.85rem;">
+                ${new Date(entry.id).toLocaleDateString()} at ${new Date(entry.id).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </span>
+          </div>
+          <div>
+            <span class="history-cals">${Math.round(entry.totals.calories)} kcal</span>
+            <button onclick="deleteEntry('${entry.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; margin-left: 8px;" title="Delete Meal">🗑️</button>
+          </div>
         </div>
-        <div class="history-time">${new Date(entry.id).toLocaleDateString()} at ${new Date(entry.id).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
         <div class="history-foods">${entry.foods.map(f => f.name).join(' · ')}</div>
         <div class="history-macros">
           <span class="macro-pill">🥩 ${entry.totals.protein_g}g</span>
           <span class="macro-pill">🍞 ${entry.totals.carbs_g}g</span>
           <span class="macro-pill">🧈 ${entry.totals.fat_g}g</span>
         </div>
+        <details style="margin-top: 8px; font-size: 0.85rem; color: #64748b;">
+          <summary style="cursor: pointer; font-weight: 500;">Show full nutrients</summary>
+          <div style="margin-top: 4px; padding: 4px; background: rgba(0,0,0,0.02); border-radius: 4px;">
+            ${entry.foods.map(f => {
+                let micros = [];
+                if (f.sugar_g) micros.push(`Sugar: ${f.sugar_g}g`);
+                if (f.fiber_g) micros.push(`Fiber: ${f.fiber_g}g`);
+                if (f.cholesterol_mg) micros.push(`Cholesterol: ${f.cholesterol_mg}mg`);
+                if (f.sodium_mg) micros.push(`Sodium: ${f.sodium_mg}mg`);
+                if (f.potassium_mg) micros.push(`Potassium: ${f.potassium_mg}mg`);
+                if (f.vitamin_a_iu) micros.push(`Vit A: ${f.vitamin_a_iu}IU`);
+                if (f.vitamin_c_mg) micros.push(`Vit C: ${f.vitamin_c_mg}mg`);
+                if (f.calcium_mg) micros.push(`Calcium: ${f.calcium_mg}mg`);
+                if (f.iron_mg) micros.push(`Iron: ${f.iron_mg}mg`);
+                return micros.length > 0 ? `<b>${f.name}</b>: ${micros.join(', ')}` : '';
+            }).filter(s => s).join('<br>')}
+          </div>
+        </details>
       </div>
     `).join('');
   } catch (e) {
     list.innerHTML = '<p class="empty-msg">Could not load history.</p>';
   }
+}
+
+async function deleteEntry(id) {
+    if (!confirm('Are you sure you want to delete this meal? This will remove it from Google Fit as well.')) return;
+    
+    document.getElementById(`history-entry-${id}`).style.opacity = '0.5';
+    
+    try {
+        const res = await fetch(`/log/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadHistory();
+        } else {
+            alert('Failed to delete meal');
+            document.getElementById(`history-entry-${id}`).style.opacity = '1';
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+        document.getElementById(`history-entry-${id}`).style.opacity = '1';
+    }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
