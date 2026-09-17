@@ -403,17 +403,18 @@ async function loadHistory() {
           <summary style="cursor: pointer; font-weight: 500;">Show full nutrients</summary>
           <div style="margin-top: 4px; padding: 4px; background: rgba(0,0,0,0.02); border-radius: 4px;">
             ${entry.foods.map(f => {
-                let micros = [];
-                if (f.sugar_g) micros.push(`Sugar: ${f.sugar_g}g`);
-                if (f.fiber_g) micros.push(`Fiber: ${f.fiber_g}g`);
-                if (f.cholesterol_mg) micros.push(`Cholesterol: ${f.cholesterol_mg}mg`);
-                if (f.sodium_mg) micros.push(`Sodium: ${f.sodium_mg}mg`);
-                if (f.potassium_mg) micros.push(`Potassium: ${f.potassium_mg}mg`);
-                if (f.vitamin_a_iu) micros.push(`Vit A: ${f.vitamin_a_iu}IU`);
-                if (f.vitamin_c_mg) micros.push(`Vit C: ${f.vitamin_c_mg}mg`);
-                if (f.calcium_mg) micros.push(`Calcium: ${f.calcium_mg}mg`);
-                if (f.iron_mg) micros.push(`Iron: ${f.iron_mg}mg`);
-                return micros.length > 0 ? `<b>${f.name}</b>: ${micros.join(', ')}` : '';
+                let microsStr = [];
+                if (f.fiber_g) microsStr.push(`Fiber: ${f.fiber_g}g`);
+                
+                if (f.micros) {
+                    for (const [k, v] of Object.entries(f.micros)) {
+                        // Format the key to be readable, e.g. "vitamin_a_iu" -> "Vitamin A Iu"
+                        let label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        microsStr.push(`${label}: ${v}`);
+                    }
+                }
+                
+                return microsStr.length > 0 ? `<b>${f.name}</b>: ${microsStr.join(', ')}` : '';
             }).filter(s => s).join('<br>')}
           </div>
         </details>

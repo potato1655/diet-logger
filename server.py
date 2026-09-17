@@ -235,24 +235,12 @@ def log_to_google_fit(foods, meal_type, time_str=None):
             ],
         }
         
-        # Dynamically add micronutrients if present and > 0
-        if float(food.get('sugar_g', 0)) > 0:
-            point['value'][0]['mapVal'].append({'key': 'sugar', 'value': {'fpVal': float(food['sugar_g'])}})
-        if float(food.get('cholesterol_mg', 0)) > 0:
-            point['value'][0]['mapVal'].append({'key': 'cholesterol', 'value': {'fpVal': float(food['cholesterol_mg'])}})
-        if float(food.get('sodium_mg', 0)) > 0:
-            point['value'][0]['mapVal'].append({'key': 'sodium', 'value': {'fpVal': float(food['sodium_mg'])}})
-        if float(food.get('potassium_mg', 0)) > 0:
-            point['value'][0]['mapVal'].append({'key': 'potassium', 'value': {'fpVal': float(food['potassium_mg'])}})
-        if float(food.get('vitamin_a_iu', 0)) > 0:
-            point['value'][0]['mapVal'].append({'key': 'vitamin_a', 'value': {'fpVal': float(food['vitamin_a_iu'])}})
-        if float(food.get('vitamin_c_mg', 0)) > 0:
-            point['value'][0]['mapVal'].append({'key': 'vitamin_c', 'value': {'fpVal': float(food['vitamin_c_mg'])}})
-        if float(food.get('calcium_mg', 0)) > 0:
-            point['value'][0]['mapVal'].append({'key': 'calcium', 'value': {'fpVal': float(food['calcium_mg'])}})
-        if float(food.get('iron_mg', 0)) > 0:
-            point['value'][0]['mapVal'].append({'key': 'iron', 'value': {'fpVal': float(food['iron_mg'])}})
-
+        # Dynamically add all micronutrients if present
+        micros = food.get('micros', {})
+        for k, v in micros.items():
+            if float(v) > 0:
+                point['value'][0]['mapVal'].append({'key': k, 'value': {'fpVal': float(v)}})
+                
         dataset_id = f'{start_ns}-{end_ns}'
         dataset_ids.append(dataset_id)
         
@@ -455,21 +443,48 @@ Return ONLY a valid JSON object matching this exact structure — no explanation
       "carbs_g": 55.0,
       "fat_g": 5.0,
       "fiber_g": 2.0,
-      "sugar_g": 0,
-      "cholesterol_mg": 0,
-      "sodium_mg": 0,
-      "potassium_mg": 0,
-      "vitamin_a_iu": 0,
-      "vitamin_c_mg": 0,
-      "calcium_mg": 0,
-      "iron_mg": 0
+      "micros": {
+         "sugar_g": 0,
+         "cholesterol_mg": 0,
+         "sodium_mg": 0,
+         "potassium_mg": 0,
+         "vitamin_a_iu": 0,
+         "vitamin_c_mg": 0,
+         "vitamin_d_iu": 0,
+         "vitamin_e_mg": 0,
+         "vitamin_k_mcg": 0,
+         "thiamin_mg": 0,
+         "riboflavin_mg": 0,
+         "niacin_mg": 0,
+         "vitamin_b6_mg": 0,
+         "folate_mcg": 0,
+         "vitamin_b12_mcg": 0,
+         "biotin_mcg": 0,
+         "pantothenic_mg": 0,
+         "choline_mg": 0,
+         "calcium_mg": 0,
+         "iron_mg": 0,
+         "magnesium_mg": 0,
+         "phosphorus_mg": 0,
+         "zinc_mg": 0,
+         "selenium_mcg": 0,
+         "copper_mcg": 0,
+         "manganese_mg": 0,
+         "chromium_mcg": 0,
+         "iodine_mcg": 0,
+         "molybdenum_mcg": 0,
+         "fluoride_mg": 0,
+         "omega_3_g": 0,
+         "omega_6_g": 0,
+         "epa_dha_mg": 0
+      }
     }
   ],
   "questions": [
     "Is that ghee on the roti?"
   ]
 }
-Include the micronutrient fields (sugar, cholesterol, vitamins, etc.) even if they are 0.
+Include any of the micronutrient fields in the `micros` dictionary if they are present or can be reasonably estimated. If unknown, they can be 0.
 """
 
     if extra_text:
@@ -627,14 +642,10 @@ def history():
             elif k == 'fat.total': food_obj['fat_g'] = v
             elif k == 'carbs.total': food_obj['carbs_g'] = v
             elif k == 'dietary_fiber': food_obj['fiber_g'] = v
-            elif k == 'sugar': food_obj['sugar_g'] = v
-            elif k == 'cholesterol': food_obj['cholesterol_mg'] = v
-            elif k == 'sodium': food_obj['sodium_mg'] = v
-            elif k == 'potassium': food_obj['potassium_mg'] = v
-            elif k == 'vitamin_a': food_obj['vitamin_a_iu'] = v
-            elif k == 'vitamin_c': food_obj['vitamin_c_mg'] = v
-            elif k == 'calcium': food_obj['calcium_mg'] = v
-            elif k == 'iron': food_obj['iron_mg'] = v
+            else:
+                if 'micros' not in food_obj:
+                    food_obj['micros'] = {}
+                food_obj['micros'][k] = v
             
         food_obj['_delete_ds'] = p.get('originDataSourceId')
         food_obj['_delete_dataset'] = f"{p_start}-{p_end}"
