@@ -306,24 +306,25 @@ def debug_fit():
     # List all data sources
     ds_resp = http_requests.get('https://www.googleapis.com/fitness/v1/users/me/dataSources', headers=headers)
     
-    # Try fetching the last 24 hours of nutrition data
+    # Try fetching the last 30 days of nutrition data
     end_ns = ns_now()
-    start_ns = end_ns - (24 * 60 * 60 * 1000000000)
-    ds_id = 'raw:com.google.nutrition:diet_logger'
+    start_ns = end_ns - (30 * 24 * 60 * 60 * 1000000000)
     
-    # Since we don't know the exact ds_id (it might have the project ID in it), let's search dataSources
     ds_list = ds_resp.json().get('dataSource', [])
-    actual_ds_id = None
+    datasets = []
     for d in ds_list:
-        if 'diet_logger' in d.get('dataStreamId', ''):
-            actual_ds_id = d.get('dataStreamId')
-            break
-            
-    dataset = None
-    if actual_ds_id:
-        dataset_url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{actual_ds_id}/datasets/{start_ns}-{end_ns}'
-        dataset_resp = http_requests.get(dataset_url, headers=headers)
-        dataset = dataset_resp.json()
+        if d.get('dataType', {}).get('name') == 'com.google.nutrition':
+            ds_id = d.get('dataStreamId')
+            dataset_url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{start_ns}-{end_ns}'
+            dataset_resp = http_requests.get(dataset_url, headers=headers)
+            if dataset_resp.status_code == 200:
+                pts = dataset_resp.json().get('point', [])
+                if pts:
+                    datasets.append({
+                        'dataSourceId': ds_id,
+                        'point_count': len(pts),
+                        'points': pts
+                    })
         
     # Also fetch aggregated nutrition to see if Google Fit recognized it
     agg_body = {
@@ -336,8 +337,7 @@ def debug_fit():
 
     return jsonify({
         'dataSources_count': len(ds_list),
-        'diet_logger_ds_id': actual_ds_id,
-        'dataset': dataset,
+        'datasets_with_data': datasets,
         'aggregated': agg_resp.json()
     })
 
