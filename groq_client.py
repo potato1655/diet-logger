@@ -14,9 +14,9 @@ def call_groq_summary(prompt):
         "Content-Type": "application/json"
     }
     
-    # Using Llama 3 8b or 70b, 8b is plenty fast and capable for this
+    # Using Llama 3.1 8B, current fast model for Groq
     data = {
-        "model": "llama3-8b-8192",
+        "model": "llama-3.1-8b-instant",
         "messages": [
             {
                 "role": "user",
@@ -31,7 +31,7 @@ def call_groq_summary(prompt):
     
     if response.status_code != 200:
         current_app.logger.error(f"Groq API Error: {response.status_code} - {response.text}")
-        raise Exception(f"Groq API Error: {response.status_code}")
+        raise Exception(f"Groq API Error: {response.status_code} - {response.text}")
         
     resp_json = response.json()
     return resp_json["choices"][0]["message"]["content"]
