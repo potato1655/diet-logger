@@ -1,7 +1,6 @@
 import os
 import socket
 from flask import Flask, jsonify
-from flask_cors import CORS
 from config import REDIRECT_URI, PORT
 
 from auth import init_auth_routes
@@ -27,10 +26,8 @@ if not app.secret_key:
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
-    SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production'
+    SESSION_COOKIE_SECURE=os.environ.get('APP_ENV') == 'production'
 )
-
-CORS(app, supports_credentials=True)
 
 from flask import request, session
 

@@ -28,24 +28,25 @@ def test_log_meal_foods_not_list(client):
     assert rv.status_code == 400
     assert 'must be a list' in rv.json['error']
 
-def test_log_meal_bad_numeric_values(client, mocker):
-    mocker.patch('routes.log_to_google_fit', return_value=(True, 'OK', ['ds-1']))
-    # Include an invalid food object and bad numeric values
-    payload = {
-        'foods': [
-            {'name': 'Apple', 'calories': 'N/A', 'protein_g': None, 'carbs_g': '10.5', 'fat_g': float('inf')},
-            "invalid string food"
-        ]
-    }
-    rv = client.post('/log', json=payload, headers={'X-CSRFToken': 'test-token'})
-    assert rv.status_code == 200
-    data = rv.json
-    assert data['success'] is True
-    assert data['entry']['totals']['calories'] == 0.0
-    assert data['entry']['totals']['protein_g'] == 0.0
-    assert data['entry']['totals']['carbs_g'] == 10.5
-    assert data['entry']['totals']['fat_g'] == 0.0
-    assert len(data['entry']['foods']) == 1
+from unittest.mock import patch
+
+def test_log_meal_bad_numeric_values(client):
+    with patch('routes.log_to_google_fit', return_value=(True, 'OK', ['ds-1'])):
+        payload = {
+            'foods': [
+                {'name': 'Apple', 'calories': 'N/A', 'protein_g': None, 'carbs_g': '10.5', 'fat_g': float('inf')},
+                "invalid string food"
+            ]
+        }
+        rv = client.post('/log', json=payload, headers={'X-CSRFToken': 'test-token'})
+        assert rv.status_code == 200
+        data = rv.json
+        assert data['success'] is True
+        assert data['entry']['totals']['calories'] == 0.0
+        assert data['entry']['totals']['protein_g'] == 0.0
+        assert data['entry']['totals']['carbs_g'] == 10.5
+        assert data['entry']['totals']['fat_g'] == 0.0
+        assert len(data['entry']['foods']) == 1
 
 def test_delete_log_invalid_json(client):
     rv = client.post('/log/delete', json={'foods': 'not a list'}, headers={'X-CSRFToken': 'test-token'})
@@ -68,3 +69,28 @@ def test_get_endpoints_work_without_csrf(client):
     rv = client.get('/auth/status')
     assert rv.status_code == 200
     assert 'csrf_token' in rv.json
+
+def test_analyze_endpoints_with_csrf(client):
+    rv = client.post('/analyze', json={'image': 'fake'}, headers={'X-CSRFToken': 'test-token'})
+    assert rv.status_code != 403
+
+def test_refine_endpoint_with_csrf(client):
+    rv = client.post('/refine', json={'food': {}, 'text': ''}, headers={'X-CSRFToken': 'test-token'})
+    assert rv.status_code != 403
+
+def test_analyze_meal_summary_with_csrf(client):
+    rv = client.post('/analyze/meal-summary', json={'meal': {}}, headers={'X-CSRFToken': 'test-token'})
+    assert rv.status_code != 403
+
+def test_analyze_week_summary_with_csrf(client):
+    rv = client.post('/analyze/week-summary', json={'meals': []}, headers={'X-CSRFToken': 'test-token'})
+    assert rv.status_code != 403
+
+def test_oauth_missing_state(client):
+    rv = client.get('/oauth/callback')
+    assert rv.status_code == 400
+    assert b'Missing state' in rv.data
+
+def test_oauth_logout_clears_session(client):
+    rv = client.post('/oauth/logout', headers={'X-CSRFToken': 'test-token'})
+    assert rv.status_code == 200
