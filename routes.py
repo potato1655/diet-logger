@@ -362,8 +362,14 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
             dset = f.get('_delete_dataset')
             
             if dset:
-                start_ns = dset.split('-')[0]
-                surgical_dset = f"{start_ns}-{int(start_ns) + 1}"
+                start_ns, end_ns = dset.split('-')
+                
+                # HOTFIX: If the dataset is exactly 15 mins wide (the bug signature), allow it.
+                # Otherwise, strictly enforce the 1-nanosecond rule.
+                if int(end_ns) - int(start_ns) == 900000000000:
+                    surgical_dset = dset
+                else:
+                    surgical_dset = f"{start_ns}-{int(start_ns) + 1}"
                 
                 url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{surgical_dset}'
                 r = http_requests.delete(url, headers=headers)
