@@ -235,11 +235,15 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
                 base_time = local_meal_time.astimezone(timezone.utc)
             except Exception:
                 pass
-                
+        if fit_dataset_ids:
+            for idx, f in enumerate(foods):
+                if idx < len(fit_dataset_ids):
+                    f['_delete_dataset'] = fit_dataset_ids[idx]
+                    
         entry = {
             'id':        base_time.isoformat(),
-            'date':      datetime.now().strftime('%Y-%m-%d'),
-            'time':      time_str or datetime.now().strftime('%H:%M'),
+            'date':      base_time.strftime('%Y-%m-%d'),
+            'time':      base_time.strftime('%H:%M'),
             'meal_type': meal_type,
             'foods':     foods,
             'totals':    totals,

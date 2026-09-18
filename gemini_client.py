@@ -22,7 +22,7 @@ def call_gemini_with_retry(prompt, img_bytes=None):
                 contents = [prompt]
                 
             return client.models.generate_content(
-                model='gemini-3.6-flash',
+                model='gemini-2.0-flash',
                 contents=contents,
             )
         except Exception as e:
