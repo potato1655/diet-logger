@@ -2,6 +2,7 @@
 let currentFoods   = [];
 let selectedMeal   = 'Lunch';
 let currentImageB64 = null;
+let csrfToken = '';
 
 // ── Init ──────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
@@ -26,6 +27,9 @@ async function checkAuth() {
   try {
     const res  = await fetch('/auth/status');
     const data = await res.json();
+    if (data.csrf_token) {
+        csrfToken = data.csrf_token;
+    }
     if (data.authenticated) {
       show('app');
       hide('auth-overlay');
@@ -42,7 +46,7 @@ async function checkAuth() {
 
 function signIn()  { window.location.href = '/oauth/login'; }
 async function signOut() {
-  await fetch('/oauth/logout', { method: 'POST' });
+  await fetch('/oauth/logout', { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
   show('auth-overlay');
   hide('app');
 }
@@ -139,7 +143,7 @@ async function analyzeFood() {
   try {
     const res  = await fetch('/analyze', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { \'X-CSRFToken\': csrfToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: currentImageB64, text: extraText }),
     });
     let data;
@@ -202,10 +206,10 @@ function renderFoods() {
       <div class="food-name">${escHtml(food.name)}</div>
       <div class="food-qty">${escHtml(food.quantity)}</div>
       <div class="food-macros">
-        <span class="macro-pill cal">🔥 ${food.calories} kcal</span>
-        <span class="macro-pill macro-pill-pro">${food.protein_g}g P</span>
-        <span class="macro-pill macro-pill-carb">${food.carbs_g}g C</span>
-        <span class="macro-pill macro-pill-fat">${food.fat_g}g F</span>
+        <span class="macro-pill cal">🔥 ${escHtml(food.calories)} kcal</span>
+        <span class="macro-pill macro-pill-pro">${escHtml(food.protein_g)}g P</span>
+        <span class="macro-pill macro-pill-carb">${escHtml(food.carbs_g)}g C</span>
+        <span class="macro-pill macro-pill-fat">${escHtml(food.fat_g)}g F</span>
       </div>
       <button class="btn-edit" onclick="toggleEdit(${idx})">
         <i data-lucide="pencil" style="width:12px;height:12px;"></i> Edit
@@ -213,10 +217,11 @@ function renderFoods() {
       <div class="edit-grid hidden" id="edit-${idx}">
         <input class="edit-full" placeholder="Food name" value="${escHtml(food.name)}" id="edit-name-${idx}" />
         <input placeholder="Quantity" value="${escHtml(food.quantity)}" id="edit-qty-${idx}" />
-        <input type="number" placeholder="Calories" value="${food.calories}" id="edit-cal-${idx}" />
-        <input type="number" placeholder="Protein (g)" value="${food.protein_g}" id="edit-pro-${idx}" />
-        <input type="number" placeholder="Carbs (g)" value="${food.carbs_g}" id="edit-carb-${idx}" />
-        <input type="number" placeholder="Fat (g)" value="${food.fat_g}" id="edit-fat-${idx}" />
+        <input type="number" placeholder="Calories" value="${escHtml(food.calories)}" id="edit-cal-${idx}" />
+        <input type="number" placeholder="Protein (g)" value="${escHtml(food.protein_g)}" id="edit-pro-${idx}" />
+        <input type="number" placeholder="Carbs (g)" value="${escHtml(food.carbs_g)}" id="edit-carb-${idx}" />
+        <input type="number" placeholder="Fat (g)" value="${escHtml(food.fat_g)}" id="edit-fat-${idx}" />
+        <input type="number" placeholder="Fiber (g)" value="${escHtml(food.fiber_g)}" id="edit-fib-${idx}" />
 
         <div class="edit-full refine-box" style="display:flex;gap:6px;align-items:center;">
           <input type="text" id="refine-text-${idx}" placeholder="e.g. 'it was a small apple'" style="flex:1;" />
@@ -278,7 +283,7 @@ async function refineFood(idx) {
   try {
     const res = await fetch('/refine', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { \'X-CSRFToken\': csrfToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ food: currentFood, text: text }),
     });
     const data = await res.json();
@@ -376,7 +381,7 @@ async function logMeal() {
   try {
     const res  = await fetch('/log', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { \'X-CSRFToken\': csrfToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({
           foods: currentFoods,
           meal_type: selectedMeal,
@@ -536,7 +541,7 @@ function renderHistoryCards() {
       }
 
       const foodList = entry.foods.map(f =>
-        `<div class="history-food-item">${f.quantity ? f.quantity + ' ' : ''}${f.name}</div>`
+        `<div class="history-food-item">${f.quantity ? escHtml(f.quantity) + ' ' : ''}${escHtml(f.name)}</div>`
       ).join('');
 
       let syncHtml = '';
@@ -618,7 +623,7 @@ async function deleteEntry(id) {
     try {
         const res = await fetch('/log/delete', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { \'X-CSRFToken\': csrfToken, 'Content-Type': 'application/json' },
             body: JSON.stringify({ foods: entry.foods })
         });
 

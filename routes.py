@@ -6,6 +6,25 @@ from flask import request, jsonify, send_from_directory, current_app
 from datetime import datetime, timezone
 import requests as http_requests
 
+
+import math
+
+def safe_float(value, default=0.0):
+    try:
+        if value is None:
+            return default
+        number = float(value)
+        if not math.isfinite(number):
+            return default
+        return number
+    except (TypeError, ValueError):
+        return default
+
+def validate_json_dict(data):
+    if not isinstance(data, dict):
+        return False
+    return True
+
 from auth import load_credentials
 from fit import log_to_google_fit, ensure_data_source, ns_now
 from gemini_client import call_gemini_with_retry
@@ -22,9 +41,9 @@ def init_routes(app):
 
     @app.route('/analyze', methods=['POST'])
     def analyze():
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'No JSON payload received'}), 400
+        data = request.get_json(silent=True)
+        if not validate_json_dict(data):
+            return jsonify({'success': False, 'error': 'Invalid JSON body'}), 400
         image_b64 = data.get('image', '')
         extra_text = data.get('text', '').strip()
 
@@ -128,7 +147,9 @@ Include any of the micronutrient fields in the `micros` dictionary if they are p
 
     @app.route('/refine', methods=['POST'])
     def refine():
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not validate_json_dict(data):
+            return jsonify({'success': False, 'error': 'Invalid JSON body'}), 400
         food = data.get('food', {})
         text = data.get('text', '').strip()
         
@@ -156,11 +177,12 @@ Return ONLY a valid JSON object matching the exact structure above. No explanati
 
     @app.route('/analyze/meal-summary', methods=['POST'])
     def analyze_meal_summary():
-        data = request.get_json()
-        if not data or 'meal' not in data:
+        data = request.get_json(silent=True)
+        if not validate_json_dict(data):
+            return jsonify({'success': False, 'error': 'Invalid JSON body'}), 400
+        if 'meal' not in data:
             return jsonify({'success': False, 'error': 'No meal data provided'}), 400
-            
-        meal = data['meal']
+        meal = data.get('meal')
         prompt = f"""You are a helpful and encouraging nutrition AI.
 I just ate this meal:
 {json.dumps(meal, indent=2)}
@@ -175,11 +197,13 @@ Give a very brief (1-3 sentences) insight into this meal. Mention if it's well-b
 
     @app.route('/analyze/week-summary', methods=['POST'])
     def analyze_week_summary():
-        data = request.get_json()
-        if not data or 'meals' not in data:
+        data = request.get_json(silent=True)
+        if not validate_json_dict(data):
+            return jsonify({'success': False, 'error': 'Invalid JSON body'}), 400
+        if 'meals' not in data:
             return jsonify({'success': False, 'error': 'No meals provided'}), 400
             
-        meals = data['meals']
+        meals = data.get('meals')
         
         # Summarize by day to keep the prompt size reasonable
         summary_data = []
@@ -208,16 +232,43 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
 
     @app.route('/log', methods=['POST'])
     def log_meal():
-        data = request.get_json()
-        meal_type = data.get('meal_type', 'Lunch')
-        foods = data.get('foods', [])
+        data = request.get_json(silent=True)
+        if not validate_json_dict(data):
+            return jsonify({'success': False, 'error': 'Invalid JSON body'}), 400
+            
+        meal_type = str(data.get('meal_type', 'Lunch'))
+        foods = data.get('foods')
+        if not isinstance(foods, list):
+            return jsonify({'success': False, 'error': 'foods must be a list'}), 400
+            
+        valid_foods = []
+        for f in foods:
+            if not isinstance(f, dict):
+                continue
+            micros_dict = f.get('micros', {})
+            valid_micros = {}
+            if isinstance(micros_dict, dict):
+                for k, v in micros_dict.items():
+                    valid_micros[str(k)] = safe_float(v)
+
+            valid_foods.append({
+                'name': str(f.get('name', 'Unknown')),
+                'quantity': str(f.get('quantity', '1 serving')),
+                'calories': safe_float(f.get('calories')),
+                'protein_g': safe_float(f.get('protein_g')),
+                'carbs_g': safe_float(f.get('carbs_g')),
+                'fat_g': safe_float(f.get('fat_g')),
+                'fiber_g': safe_float(f.get('fiber_g')),
+                'micros': valid_micros
+            })
+        foods = valid_foods
 
         totals = {
-            'calories':  round(sum(f.get('calories',  0) for f in foods), 1),
-            'protein_g': round(sum(f.get('protein_g', 0) for f in foods), 1),
-            'carbs_g':   round(sum(f.get('carbs_g',   0) for f in foods), 1),
-            'fat_g':     round(sum(f.get('fat_g',      0) for f in foods), 1),
-            'fiber_g':   round(sum(f.get('fiber_g',    0) for f in foods), 1),
+            'calories':  round(sum(f['calories'] for f in foods), 1),
+            'protein_g': round(sum(f['protein_g'] for f in foods), 1),
+            'carbs_g':   round(sum(f['carbs_g'] for f in foods), 1),
+            'fat_g':     round(sum(f['fat_g'] for f in foods), 1),
+            'fiber_g':   round(sum(f['fiber_g'] for f in foods), 1),
         }
 
         time_str = data.get('time')
@@ -347,8 +398,12 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
 
     @app.route('/log/delete', methods=['POST'])
     def delete_log():
-        data = request.get_json()
-        foods_to_delete = data.get('foods', [])
+        data = request.get_json(silent=True)
+        if not validate_json_dict(data):
+            return jsonify({'success': False, 'error': 'Invalid JSON body'}), 400
+        foods_to_delete = data.get('foods')
+        if not isinstance(foods_to_delete, list):
+            return jsonify({'success': False, 'error': 'foods must be a list'}), 400
         
         creds = load_credentials()
         if not creds or not creds.valid:

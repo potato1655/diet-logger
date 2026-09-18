@@ -66,11 +66,15 @@ def init_auth_routes(app):
             if 'code_verifier' in session:
                 kwargs['code_verifier'] = session['code_verifier']
                 
+            state = session.get('oauth_state')
+            if not state:
+                return "Authentication failed: Missing state.", 400
+                
             flow = Flow.from_client_config(
                 get_client_config(),
                 scopes=SCOPES,
                 redirect_uri=REDIRECT_URI,
-                state=session.get('oauth_state'),
+                state=state,
                 **kwargs
             )
             
@@ -80,6 +84,10 @@ def init_auth_routes(app):
                 
             flow.fetch_token(authorization_response=auth_response)
             save_token(flow.credentials)
+            
+            session.pop('oauth_state', None)
+            session.pop('code_verifier', None)
+            
             return redirect('/?auth=success')
         except Exception as e:
             current_app.logger.error(f"OAuth Callback Error: {e}", exc_info=True)
@@ -87,12 +95,15 @@ def init_auth_routes(app):
 
     @app.route('/oauth/logout', methods=['POST'])
     def oauth_logout():
-        session.pop('google_token', None)
+        session.clear()
         return jsonify({'success': True})
 
     @app.route('/auth/status')
     def auth_status():
+        if '_csrf_token' not in session:
+            session['_csrf_token'] = os.urandom(24).hex()
+            
         creds = load_credentials()
         if creds and creds.valid:
-            return jsonify({'authenticated': True})
-        return jsonify({'authenticated': False})
+            return jsonify({'authenticated': True, 'csrf_token': session['_csrf_token']})
+        return jsonify({'authenticated': False, 'csrf_token': session['_csrf_token']})

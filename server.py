@@ -24,8 +24,22 @@ if not app.secret_key:
         with open(secret_file, 'wb') as f:
             f.write(app.secret_key)
 
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production'
+)
+
 CORS(app, supports_credentials=True)
 
+from flask import request, session
+
+@app.before_request
+def csrf_protect():
+    if request.method == "POST":
+        token = session.get('_csrf_token', None)
+        if not token or token != request.headers.get('X-CSRFToken'):
+            return jsonify({'success': False, 'error': 'CSRF token missing or incorrect'}), 403
 # Secure global exception handler
 @app.errorhandler(Exception)
 def handle_exception(e):
