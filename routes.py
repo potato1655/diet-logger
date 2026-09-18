@@ -9,6 +9,7 @@ import requests as http_requests
 from auth import load_credentials
 from fit import log_to_google_fit, ensure_data_source, ns_now
 from gemini_client import call_gemini_with_retry
+from groq_client import call_groq_summary
 
 def init_routes(app):
     @app.route('/')
@@ -166,8 +167,8 @@ I just ate this meal:
 
 Give a very brief (1-3 sentences) insight into this meal. Mention if it's well-balanced, what macros/micros stand out, or what I could pair it with next time to improve it. Keep it conversational, friendly, and short. Do not use markdown headers, just plain text or simple bolding."""
         try:
-            response = call_gemini_with_retry(prompt)
-            return jsonify({'success': True, 'summary': response.text.strip()})
+            summary = call_groq_summary(prompt)
+            return jsonify({'success': True, 'summary': summary.strip()})
         except Exception as e:
             current_app.logger.error(f"Meal summary error: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
@@ -199,8 +200,8 @@ Here is a summary of my logged meals over the past few days (up to 7 days):
 
 Give me a high-level summary of my eating habits. Highlight what I am doing well, what I might be missing out on (e.g., low protein, low fiber), and general suggestions for improvement. Keep it to 2-3 short paragraphs. Be motivating!"""
         try:
-            response = call_gemini_with_retry(prompt)
-            return jsonify({'success': True, 'summary': response.text.strip()})
+            summary = call_groq_summary(prompt)
+            return jsonify({'success': True, 'summary': summary.strip()})
         except Exception as e:
             current_app.logger.error(f"Week summary error: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500

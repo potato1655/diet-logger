@@ -12,6 +12,8 @@ if not GEMINI_API_KEYS:
 GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_CLIENT_ID.apps.googleusercontent.com')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', 'YOUR_CLIENT_SECRET')
 
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+
 # Set this to your Railway URL after deploying, e.g.:
 # https://your-app.up.railway.app/oauth/callback
 REDIRECT_URI = os.environ.get('REDIRECT_URI', 'http://localhost:5000/oauth/callback')
