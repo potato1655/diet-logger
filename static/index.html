@@ -24,8 +24,6 @@
 
 <!-- Main app -->
 <div id="app" class="hidden">
-  <div id="bg-glow"></div>
-
   <!-- Header -->
   <header>
     <span class="logo" style="display:flex;align-items:center;gap:6px;"><i data-lucide="salad" style="width:20px;height:20px;color:var(--accent)"></i> Diet Logger</span>
@@ -35,13 +33,8 @@
   <!-- Content area -->
   <main>
 
-    <!-- ── HOME TAB (NEW) ── -->
-    <section id="tab-home" class="tab-content active">
-      <div id="daily-dashboard"></div>
-    </section>
-
     <!-- ── LOG TAB ── -->
-    <section id="tab-log" class="tab-content">
+    <section id="tab-log" class="tab-content active">
 
       <!-- Upload area -->
       <div class="upload-area">
@@ -136,13 +129,7 @@
 
   <!-- Navigation -->
   <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="switchTab('home', this)">
-      <div class="nav-btn-inner">
-        <i data-lucide="layout-dashboard"></i>
-        <span>Home</span>
-      </div>
-    </button>
-    <button class="nav-btn" onclick="switchTab('log', this)">
+    <button class="nav-btn active" onclick="switchTab('log', this)">
       <div class="nav-btn-inner">
         <i data-lucide="plus-circle"></i>
         <span>Log</span>
@@ -158,7 +145,7 @@
 
 </div>
 
-<script src="/app.js?v=24"></script>
+<script src="/app.js?v=25"></script>
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
