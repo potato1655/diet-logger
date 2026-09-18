@@ -1,4 +1,4 @@
-// ── State ─────────────────────────────────────────────────────────────────
+﻿// ── State ─────────────────────────────────────────────────────────────────
 let currentFoods   = [];
 let selectedMeal   = 'Lunch';
 let currentImageB64 = null;
@@ -1014,6 +1014,3 @@ async function getWeekInsight() {
   }
   lucide.createIcons();
 }
- 
- f u n c t i o n   c l o s e M o d a l ( )   {   d o c u m e n t . g e t E l e m e n t B y I d ( ' g e n e r i c - m o d a l ' ) . s t y l e . d i s p l a y   =   ' n o n e ' ;   }  
- 
