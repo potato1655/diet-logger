@@ -158,7 +158,7 @@
 
 </div>
 
-<script src="/app.js?v=20"></script>
+<script src="/app.js?v=21"></script>
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
@@ -184,5 +184,14 @@
   </script>
   <!-- Toast Container -->
   <div id="toast-container" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:9999;width:90%;max-width:400px;pointer-events:none;"></div>
+  
+  <!-- Generic Modal (used for Micros and Macro history) -->
+  <div id="generic-modal" style="display: none; position: fixed; inset: 0; background: var(--bg); z-index: 1000; overflow-y: auto; padding: 1rem; padding-bottom: 100px;">
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; position: sticky; top: 0; background: var(--bg); padding-top: 1rem; padding-bottom: 1rem; z-index: 10; border-bottom: 1px solid var(--border);">
+      <button onclick="closeModal()" style="background: rgba(255,255,255,0.08); border: none; border-radius: 999px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--text); cursor: pointer;"><i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i></button>
+      <h2 id="generic-modal-title" style="font-size: 1.15rem; font-weight: 600;"></h2>
+    </div>
+    <div id="generic-modal-content"></div>
+  </div>
 </body>
 </html>

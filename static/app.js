@@ -82,38 +82,49 @@ function renderDailyDashboard(meals) {
     });
   });
   
-  // ── Dynamic Glow ──
+  // ── Hero Macros (Google Fit Style) ──
   const cals = Math.round(sums.calories || 0);
   const targetCals = DAILY_TARGETS.macros.calories.target;
-  const pctCals = (cals / targetCals) * 100;
+  const diff = targetCals - cals;
   
-  let glowColor = 'transparent';
-  if (cals > targetCals + 100) glowColor = '#ff5e5e'; // Red (over limit)
-  else if (cals > targetCals - 300) glowColor = '#f2a93b'; // Amber (approaching)
-  else glowColor = '#6dbf8d'; // Green (plenty of room)
+  let state = 'under';
+  if (Math.abs(diff) <= 150) state = 'target';
+  else if (diff < 0) state = 'over';
+
+  let heroColor = '#5cc5ed'; // Cyan
+  let glowColor = 'rgba(92, 197, 237, 0.4)';
+  let heroTitle = '';
+  let heroSubtitle = '';
+
+  if (state === 'under') {
+    heroTitle = `<span style="font-size: 3.5rem;">${diff.toLocaleString()}</span> <span style="font-size: 1.2rem; font-weight: 500; color: var(--text);">cal under</span>`;
+    heroSubtitle = "Keep fuelling your body to stay energized for the rest of the day.";
+  } else if (state === 'target') {
+    heroColor = '#6dbf8d'; // Green
+    glowColor = 'rgba(109, 191, 141, 0.4)';
+    heroTitle = `<span style="font-size: 3.5rem;">On target</span>`;
+    heroSubtitle = "You're in the calorie sweet spot. Great work finding the right balance.";
+  } else {
+    heroColor = '#f2a93b'; // Orange
+    glowColor = 'rgba(242, 169, 59, 0.4)';
+    heroTitle = `<span style="font-size: 3.5rem;">${Math.abs(diff).toLocaleString()}</span> <span style="font-size: 1.2rem; font-weight: 500; color: var(--text);">cal over</span>`;
+    heroSubtitle = "Looks like it's a higher energy day. Remember, weekly balance matters most.";
+  }
+  
   document.documentElement.style.setProperty('--glow-color', glowColor);
 
-  // ── Hero Macros ──
-  const diff = targetCals - cals;
-  const isOver = diff < 0;
-  const diffText = isOver ? `${Math.abs(diff)} kcal over` : `+${diff} kcal rem.`;
-  const diffColor = isOver ? 'var(--red)' : 'var(--accent)';
-  const diffBg = isOver ? 'rgba(255,94,94,0.15)' : 'rgba(109,191,141,0.15)';
-  const diffIcon = isOver ? 'arrow-up-right' : 'arrow-down-right';
-
   let macroHtml = `
-    <div class="hero-metric-container" style="text-align: center; margin: 1.5rem 0 2rem 0; z-index: 1; position: relative;">
-      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Calories Eaten</div>
-      <div style="font-size: 3.5rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text); line-height: 1; margin-bottom: 0.75rem;">${cals.toLocaleString()}</div>
-      <div style="display: flex; justify-content: center;">
-        <span style="background: ${diffBg}; color: ${diffColor}; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-          <i data-lucide="${diffIcon}" style="width:14px; height:14px;"></i>
-          ${diffText}
-        </span>
+    <div class="hero-metric-container" style="margin: 1.5rem 0 2rem 0; z-index: 1; position: relative;">
+      <div style="font-size: 1rem; color: var(--text); margin-bottom: 0.5rem; font-weight: 600;">Today</div>
+      <div style="font-weight: 700; letter-spacing: -0.03em; color: ${heroColor}; line-height: 1; margin-bottom: 0.75rem; display: flex; align-items: baseline; gap: 6px;">
+        ${heroTitle}
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; max-width: 95%;">
+        ${heroSubtitle}
       </div>
     </div>
     
-    <div class="hero-macros-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 2rem; background: var(--card); padding: 12px; border-radius: 16px; border: 1px solid var(--border);">
+    <div class="hero-macros-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 2rem; background: var(--card); padding: 8px; border-radius: 16px; border: 1px solid var(--border);">
   `;
 
   for (const key of ['protein_g', 'carbs_g', 'fat_g']) {
@@ -122,9 +133,9 @@ function renderDailyDashboard(meals) {
     const pct = Math.min(Math.round((current / info.target) * 100), 100);
     const barColor = key === 'protein_g' ? '#7cb8e0' : key === 'carbs_g' ? '#d8a850' : '#c8b090';
     macroHtml += `
-      <div class="hero-macro-item" style="display: flex; flex-direction: column; gap: 4px;">
+      <div class="hero-macro-item" style="display: flex; flex-direction: column; gap: 4px; cursor: pointer; padding: 8px; border-radius: 10px; transition: background 0.2s;" onclick="openMacroHistory('${key}')" onmouseover="this.style.background='var(--bg-raised)'" onmouseout="this.style.background='transparent'">
         <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">${info.label}</div>
-        <div style="font-size: 0.95rem; font-weight: 600;">${current} <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 400;">/ ${info.target}g</span></div>
+        <div style="font-size: 0.95rem; font-weight: 600; color: var(--text);">${current} <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 400;">/ ${info.target}g</span></div>
         <div style="height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 4px; overflow: hidden;">
           <div style="width: ${pct}%; background: ${barColor}; height: 100%; border-radius: 2px;"></div>
         </div>
@@ -190,20 +201,98 @@ function renderDailyDashboard(meals) {
     microHtml += `<div style="text-align: center; color: var(--text-dim); font-size: 0.65rem; margin-top: 1rem; margin-bottom: 0.5rem;">sorted by most behind</div>`;
   }
   
+  window.currentMicroHtml = microHtml;
+  
+  let microButtonHtml = '';
+  if (microHtml) {
+    microButtonHtml = `
+      <div style="margin-top: 0.5rem; margin-bottom: 2rem;">
+        <button onclick="openMicrosModal()" style="width: 100%; background: var(--bg-raised); border: 1px solid var(--border); padding: 1rem; border-radius: 16px; color: var(--text); cursor: pointer; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; justify-content: space-between; font-family: inherit; transition: all 0.2s;" onmouseover="this.style.background='var(--card)'" onmouseout="this.style.background='var(--bg-raised)'">
+          <div style="display: flex; align-items: center; gap: 0.8rem;">
+            <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 10px;">
+              <i data-lucide="test-tubes" style="width: 18px; height: 18px; color: #7cb8e0;"></i>
+            </div>
+            Detailed Micronutrients
+          </div>
+          <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-dim);"></i>
+        </button>
+      </div>
+    `;
+  }
+
   container.innerHTML = `
     ${macroHtml}
-    ${microHtml}
+    ${microButtonHtml}
     
-    <div id="ai-week-insight-container" style="margin-top: 2rem; margin-bottom: 0.5rem;">
-      <button onclick="getWeekInsight()" class="btn-ai-insight" style="width: 100%; background: var(--bg-raised); border: 1px solid var(--border); padding: 1rem; border-radius: 16px; color: var(--text); cursor: pointer; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.6rem; font-family: inherit; transition: all 0.2s;">
+    <div id="ai-week-insight-container" style="margin-bottom: 0.5rem;">
+      <button onclick="getWeekInsight()" class="btn-ai-insight" style="width: 100%; background: var(--bg-raised); border: 1px solid var(--border); padding: 1rem; border-radius: 16px; color: var(--text); cursor: pointer; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.6rem; font-family: inherit; transition: all 0.2s;" onmouseover="this.style.background='var(--card)'" onmouseout="this.style.background='var(--bg-raised)'">
         <i data-lucide="sparkles" style="width: 18px; height: 18px; color: var(--accent);"></i>
         Weekly AI Summary
       </button>
     </div>
   `;
   
-  // Need to render the new chevron icons
   setTimeout(() => lucide.createIcons(), 0);
+}
+
+function openMicrosModal() {
+  document.getElementById('generic-modal-title').innerText = "Micronutrients";
+  document.getElementById('generic-modal-content').innerHTML = window.currentMicroHtml || '<p>No data</p>';
+  document.getElementById('generic-modal').style.display = 'block';
+  setTimeout(() => lucide.createIcons(), 0);
+}
+
+function openMacroHistory(macroKey) {
+  const info = DAILY_TARGETS.macros[macroKey];
+  document.getElementById('generic-modal-title').innerText = info.label + " History (Last 7 Days)";
+  
+  // Build last 7 days history
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  
+  let chartHtml = `<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 1rem;">`;
+  
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toDateString();
+    
+    // Calculate sum for this date
+    let daySum = 0;
+    const dayMeals = window.historyData ? window.historyData.filter(m => new Date(m.id).toDateString() === dateStr) : [];
+    dayMeals.forEach(m => {
+      daySum += (m.totals?.[macroKey] || 0);
+    });
+    daySum = Math.round(daySum);
+    
+    const pct = Math.min(Math.round((daySum / info.target) * 100), 100);
+    const barColor = macroKey === 'protein_g' ? '#7cb8e0' : macroKey === 'carbs_g' ? '#d8a850' : '#c8b090';
+    
+    let displayDate = d.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'});
+    if (i === 0) displayDate = 'Today';
+    else if (i === 1) displayDate = 'Yesterday';
+    
+    chartHtml += `
+      <div style="background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-size: 0.85rem; font-weight: 500;">${displayDate}</span>
+          <span style="font-size: 0.85rem; font-weight: 600; color: var(--text);">${daySum} <span style="font-size: 0.7rem; color: var(--text-dim); font-weight: 400;">/ ${info.target}g</span></span>
+        </div>
+        <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+          <div style="width: ${pct}%; background: ${barColor}; height: 100%; border-radius: 3px;"></div>
+        </div>
+      </div>
+    `;
+  }
+  
+  chartHtml += `</div>`;
+  
+  document.getElementById('generic-modal-content').innerHTML = chartHtml;
+  document.getElementById('generic-modal').style.display = 'block';
+}
+
+function closeModal() {
+  document.getElementById('generic-modal').style.display = 'none';
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
@@ -925,3 +1014,6 @@ async function getWeekInsight() {
   }
   lucide.createIcons();
 }
+ 
+ f u n c t i o n   c l o s e M o d a l ( )   {   d o c u m e n t . g e t E l e m e n t B y I d ( ' g e n e r i c - m o d a l ' ) . s t y l e . d i s p l a y   =   ' n o n e ' ;   }  
+ 
