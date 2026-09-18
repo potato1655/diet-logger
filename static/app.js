@@ -380,6 +380,17 @@ async function logMeal() {
 
     if (data.success) {
       hide('food-results');
+      
+      // Optimistic UI for history
+      if (data.entry) {
+          data.entry.syncing = true;
+          data.entry.loggedAt = Date.now();
+          historyData.unshift(data.entry);
+          if (document.getElementById('tab-history').classList.contains('active')) {
+              renderHistoryCards();
+          }
+      }
+
       const msg = document.getElementById('success-msg');
       msg.querySelector('span').textContent =
         data.health_logged
@@ -433,12 +444,41 @@ let historyData = [];
 
 async function loadHistory() {
   const list = document.getElementById('history-list');
-  list.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.5rem;"><div class="skeleton-card"></div><div class="skeleton-card" style="width:90%;"></div><div class="skeleton-card" style="width:80%;"></div></div>';
+  if (historyData.length === 0) {
+    list.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.5rem;"><div class="skeleton-card"></div><div class="skeleton-card" style="width:90%;"></div><div class="skeleton-card" style="width:80%;"></div></div>';
+  }
+  
   try {
     const res  = await fetch('/history');
-    const data = await res.json();
-    historyData = data;
-    if (data.length === 0) {
+    const serverData = await res.json();
+    
+    // Keep optimistic entries that haven't synced yet (and are < 15 mins old)
+    const optimistic = historyData.filter(opt => {
+        if (!opt.syncing) return false;
+        if (Date.now() - opt.loggedAt > 15 * 60 * 1000) return false;
+        
+        // Check if server data already has it
+        const optTime = new Date(opt.id).getTime();
+        const found = serverData.some(srv => {
+            if (srv.meal_type !== opt.meal_type) return false;
+            const srvTime = new Date(srv.id).getTime();
+            return Math.abs(srvTime - optTime) < 5 * 60 * 1000;
+        });
+        return !found;
+    });
+
+    historyData = [...optimistic, ...serverData];
+    historyData.sort((a, b) => new Date(b.id).getTime() - new Date(a.id).getTime());
+    
+    renderHistoryCards();
+  } catch (e) {
+    list.innerHTML = '<p class="empty-msg">Could not load history.</p>';
+  }
+}
+
+function renderHistoryCards() {
+    const list = document.getElementById('history-list');
+    if (historyData.length === 0) {
       list.innerHTML = `
         <div style="text-align:center;padding:3rem 1rem;color:var(--text-muted);">
           <i data-lucide="utensils-crossed" style="width:48px;height:48px;opacity:0.3;margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto;"></i>
@@ -449,9 +489,10 @@ async function loadHistory() {
       lucide.createIcons();
       return;
     }
+    
     let currentDayStr = '';
 
-    list.innerHTML = data.map((entry, entryIdx) => {
+    list.innerHTML = historyData.map((entry, entryIdx) => {
       const mealIcons = { Breakfast: '☀️', Lunch: '🍽️', Dinner: '🌙', Snack: '🍎', Other: '📋' };
       const icon = mealIcons[entry.meal_type] || '📋';
       const d = new Date(entry.id);
@@ -476,6 +517,25 @@ async function loadHistory() {
         `<div class="history-food-item">${f.quantity ? f.quantity + ' ' : ''}${f.name}</div>`
       ).join('');
 
+      let syncHtml = '';
+      if (entry.syncing) {
+          const elapsedSecs = (Date.now() - entry.loggedAt) / 1000;
+          const remainingSecs = Math.max(0, 420 - elapsedSecs); // 7 minutes estimate
+          const percentDone = Math.min(100, (elapsedSecs / 420) * 100);
+          
+          syncHtml = `
+            <div class="sync-indicator" style="margin-top: 1rem; background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.06);">
+              <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-dim); margin-bottom:8px; font-weight:600;">
+                <span style="display:flex; align-items:center; gap:6px; color:var(--accent);"><i data-lucide="loader-2" class="spin" style="width:14px;height:14px;"></i> Syncing to Google Health...</span>
+                <span>Est. ~7 mins</span>
+              </div>
+              <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden;">
+                <div style="height:100%; width:100%; background:var(--accent); transform-origin:left; transform: scaleX(${percentDone/100}); animation: syncFill ${remainingSecs}s linear forwards;"></div>
+              </div>
+            </div>
+          `;
+      }
+
       return `
       ${dayHeaderHtml}
       <div class="history-card animate-in" style="animation-delay:${entryIdx * 0.04}s;" id="history-entry-${entry.id}">
@@ -498,14 +558,12 @@ async function loadHistory() {
             <span class="macro-pill macro-pill-fat">${entry.totals.fat_g}g F</span>
           </div>
           <div class="history-foods">${foodList}</div>
+          ${syncHtml}
         </div>
       </div>`;
     }).join('');
 
     setTimeout(() => lucide.createIcons(), 0);
-  } catch (e) {
-    list.innerHTML = '<p class="empty-msg">Could not load history.</p>';
-  }
 }
 
 async function deleteEntry(id) {
