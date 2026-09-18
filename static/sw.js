@@ -1,4 +1,4 @@
-const CACHE = 'diet-logger-v32';
+const CACHE = 'diet-logger-v33';
 const ASSETS = ['/', '/style.css', '/app.js', '/manifest.json'];
 
 self.addEventListener('install', e => {

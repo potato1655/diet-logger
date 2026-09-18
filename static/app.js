@@ -462,7 +462,9 @@ async function loadHistory() {
         const found = serverData.find(srv => {
             if (srv.meal_type !== opt.meal_type) return false;
             const srvTime = new Date(srv.id).getTime();
-            return Math.abs(srvTime - optTime) < 5 * 60 * 1000;
+            // The optimistic ID is the end time (base_time), but the server ID is the start time (p_start)
+            // Since meals are 15 minutes wide, srvTime is ~15 mins before optTime.
+            return Math.abs(srvTime - optTime) < 20 * 60 * 1000; // 20 minutes window
         });
         
         if (found) {
