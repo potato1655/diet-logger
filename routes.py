@@ -140,10 +140,10 @@ Include any of the micronutrient fields in the `micros` dictionary if they are p
             return jsonify({'success': True, 'foods': foods, 'questions': questions})
 
         except json.JSONDecodeError as e:
-            return jsonify({'success': False, 'error': f'AI returned invalid JSON: {e}'}), 500
+            return jsonify({'success': False, 'error': 'AI returned an invalid response.'}), 500
         except Exception as e:
             current_app.logger.error(f"Analyze error: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return jsonify({'success': False, 'error': 'An internal server error occurred.'}), 500
 
     @app.route('/refine', methods=['POST'])
     def refine():
@@ -173,7 +173,7 @@ Return ONLY a valid JSON object matching the exact structure above. No explanati
             return jsonify({'success': True, 'food': updated_food})
         except Exception as e:
             current_app.logger.error(f"Refine error: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return jsonify({'success': False, 'error': 'An internal server error occurred.'}), 500
 
     @app.route('/analyze/meal-summary', methods=['POST'])
     def analyze_meal_summary():
@@ -193,7 +193,7 @@ Give a very brief (1-3 sentences) insight into this meal. Mention if it's well-b
             return jsonify({'success': True, 'summary': summary.strip()})
         except Exception as e:
             current_app.logger.error(f"Meal summary error: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return jsonify({'success': False, 'error': 'An internal server error occurred.'}), 500
 
     @app.route('/analyze/week-summary', methods=['POST'])
     def analyze_week_summary():
@@ -228,7 +228,7 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
             return jsonify({'success': True, 'summary': summary.strip()})
         except Exception as e:
             current_app.logger.error(f"Week summary error: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return jsonify({'success': False, 'error': 'An internal server error occurred.'}), 500
 
     @app.route('/log', methods=['POST'])
     def log_meal():
@@ -415,7 +415,7 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
         try:
             ds_id = ensure_data_source(headers)
         except Exception as e:
-            return jsonify({'success': False, 'error': f"Failed to get app data source: {e}"}), 500
+            return jsonify({'success': False, 'error': 'Failed to get app data source.'}), 500
             
         for f in foods_to_delete:
             target_ds_id = f.get('_delete_ds')
