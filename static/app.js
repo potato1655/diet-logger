@@ -114,7 +114,7 @@ function renderDailyDashboard(meals) {
   document.documentElement.style.setProperty('--glow-color', glowColor);
 
   let macroHtml = `
-    <div class="hero-metric-container" style="margin: 1.5rem 0 2rem 0; z-index: 1; position: relative;">
+    <div class="hero-metric-container" style="margin: 1.5rem 0 2rem 0; z-index: 1; position: relative; cursor: pointer;" onclick="openMacroHistory('calories')">
       <div style="font-size: 1rem; color: var(--text); margin-bottom: 0.5rem; font-weight: 600;">Today</div>
       <div style="font-weight: 700; letter-spacing: -0.03em; color: ${heroColor}; line-height: 1; margin-bottom: 0.75rem; display: flex; align-items: baseline; gap: 6px;">
         ${heroTitle}
@@ -258,12 +258,22 @@ function openMacroHistory(macroKey) {
     let daySum = 0;
     const dayMeals = window.historyData ? window.historyData.filter(m => new Date(m.id).toDateString() === dateStr) : [];
     dayMeals.forEach(m => {
-      daySum += (m.totals?.[macroKey] || 0);
+      (m.foods || []).forEach(f => {
+        daySum += (f[macroKey] || 0);
+      });
     });
     daySum = Math.round(daySum);
     
     const pct = Math.min(Math.round((daySum / info.target) * 100), 100);
-    const barColor = macroKey === 'protein_g' ? '#7cb8e0' : macroKey === 'carbs_g' ? '#d8a850' : '#c8b090';
+    let barColor = 'var(--accent)';
+    if (macroKey === 'protein_g') barColor = '#7cb8e0';
+    else if (macroKey === 'carbs_g') barColor = '#d8a850';
+    else if (macroKey === 'fat_g') barColor = '#c8b090';
+    else if (macroKey === 'calories') {
+      if (daySum > info.target + 100) barColor = '#ff5e5e';
+      else if (daySum > info.target - 200) barColor = '#6dbf8d';
+      else barColor = '#5cc5ed';
+    }
     
     let displayDate = d.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'});
     if (i === 0) displayDate = 'Today';
@@ -273,7 +283,7 @@ function openMacroHistory(macroKey) {
       <div style="background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
           <span style="font-size: 0.85rem; font-weight: 500;">${displayDate}</span>
-          <span style="font-size: 0.85rem; font-weight: 600; color: var(--text);">${daySum} <span style="font-size: 0.7rem; color: var(--text-dim); font-weight: 400;">/ ${info.target}g</span></span>
+          <span style="font-size: 0.85rem; font-weight: 600; color: var(--text);">${daySum} <span style="font-size: 0.7rem; color: var(--text-dim); font-weight: 400;">/ ${info.target}${info.unit}</span></span>
         </div>
         <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
           <div style="width: ${pct}%; background: ${barColor}; height: 100%; border-radius: 3px;"></div>
