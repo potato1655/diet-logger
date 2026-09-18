@@ -81,11 +81,9 @@ def log_to_google_fit(foods, meal_type, time_str=None, timestamp=None):
             pass
 
     for i, food in enumerate(foods):
-        end_time = base_time + timedelta(milliseconds=i)
-        start_time = end_time - timedelta(minutes=15)
-        
-        end_ns = int(end_time.timestamp() * 1e9)
+        start_time = base_time + timedelta(milliseconds=i)
         start_ns = int(start_time.timestamp() * 1e9)
+        end_ns = start_ns + 1
 
         point = {
             'dataTypeName': 'com.google.nutrition',

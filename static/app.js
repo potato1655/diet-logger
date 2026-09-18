@@ -529,8 +529,12 @@ async function deleteEntry(id) {
         });
 
         if (res.ok) {
-            setTimeout(() => loadHistory(), 300);
-            showToast('Meal deleted');
+            historyData = historyData.filter(e => e.id !== id);
+            setTimeout(() => {
+                if (el) el.remove();
+                if (historyData.length === 0) loadHistory(); // show empty state
+            }, 300);
+            showToast('Meal deleted from Google Fit');
         } else {
             const data = await res.json();
             showToast('Failed: ' + data.error, true);
