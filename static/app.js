@@ -449,6 +449,9 @@ function resetLog() {
 
 // ── History ───────────────────────────────────────────────────────────────
 let historyData = [];
+let pendingDeletes = JSON.parse(localStorage.getItem('pendingDeletes') || '[]');
+pendingDeletes = pendingDeletes.filter(d => Date.now() - d.time < 2 * 60 * 60 * 1000); // 2 hours TTL
+localStorage.setItem('pendingDeletes', JSON.stringify(pendingDeletes));
 
 async function loadHistory() {
   const list = document.getElementById('history-list');
@@ -458,7 +461,10 @@ async function loadHistory() {
   
   try {
     const res  = await fetch('/history');
-    const serverData = await res.json();
+    let serverData = await res.json();
+    
+    // Filter out deleted ghost meals
+    serverData = serverData.filter(srv => !pendingDeletes.some(d => d.id === srv.id));
     
     // Keep optimistic entries that haven't synced yet (and are < 15 mins old)
     const optimistic = historyData.filter(opt => {
@@ -596,12 +602,21 @@ async function deleteEntry(id) {
 
     if (!confirm('Delete this meal from Google Fit?')) return;
 
-    const el = document.getElementById(`history-entry-${id}`);
+    const el = document.getElementById('history-entry-' + id);
+    let btn, originalIcon;
     if (el) {
-      el.style.transition = 'all 0.3s ease';
-      el.style.opacity = '0';
-      el.style.transform = 'translateX(-30px) scale(0.95)';
+        btn = el.querySelector('.btn-delete-meal');
+        if (btn) {
+            originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:15px;height:15px;"></i>';
+            btn.disabled = true;
+            lucide.createIcons();
+        }
+        el.style.opacity = '0.5';
     }
+
+    const entry = historyData.find(e => e.id === id);
+    if (!entry) return;
 
     try {
         const res = await fetch('/log/delete', {
@@ -611,6 +626,10 @@ async function deleteEntry(id) {
         });
 
         if (res.ok) {
+            // Add to local cache so it doesn't reappear on refresh while Google syncs
+            pendingDeletes.push({ id: id, time: Date.now() });
+            localStorage.setItem('pendingDeletes', JSON.stringify(pendingDeletes));
+
             historyData = historyData.filter(e => e.id !== id);
             setTimeout(() => {
                 if (el) el.remove();
@@ -620,11 +639,13 @@ async function deleteEntry(id) {
         } else {
             const data = await res.json();
             showToast('Failed: ' + data.error, true);
-            if (el) { el.style.opacity = '1'; el.style.transform = ''; }
+            if (el) { el.style.opacity = '1'; }
+            if (btn) { btn.innerHTML = originalIcon; btn.disabled = false; }
         }
     } catch (e) {
         showToast('Error: ' + e.message, true);
-        if (el) { el.style.opacity = '1'; el.style.transform = ''; }
+        if (el) { el.style.opacity = '1'; }
+        if (btn) { btn.innerHTML = originalIcon; btn.disabled = false; }
     }
 }
 

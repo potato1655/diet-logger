@@ -374,3 +374,29 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
             return jsonify({'success': False, 'error': '; '.join(errors)}), 500
             
         return jsonify({'success': True})
+
+    @app.route('/nuke18', methods=['GET', 'POST'])
+    def nuke18():
+        creds = load_credentials()
+        if not creds or not creds.valid:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        headers = {'Authorization': f'Bearer {creds.token}'}
+        ds_id = 'raw:com.google.nutrition:diet_logger'
+        
+        # 18th of Sept in nanoseconds (UTC)
+        start_ns = int(datetime(2026, 9, 18, 0, 0, tzinfo=timezone.utc).timestamp() * 1e9)
+        end_ns = int(datetime(2026, 9, 19, 0, 0, tzinfo=timezone.utc).timestamp() * 1e9)
+        
+        # Also let's check local time just in case
+        dset = f"{start_ns}-{end_ns}"
+        
+        # We can just request Google Fit to delete this entire massive time range from our dataset!
+        # This will wipe everything we logged on the 18th (and only what we logged, since it's our raw dataset).
+        url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{dset}'
+        r = http_requests.delete(url, headers=headers)
+        
+        if r.status_code in (200, 204):
+            return "SUCCESS! Nuked all meals on the 18th from Google Fit! Go back and refresh."
+        else:
+            return f"FAILED to nuke: {r.status_code} {r.text}"
