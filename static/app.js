@@ -459,12 +459,18 @@ async function loadHistory() {
         
         // Check if server data already has it
         const optTime = new Date(opt.id).getTime();
-        const found = serverData.some(srv => {
+        const found = serverData.find(srv => {
             if (srv.meal_type !== opt.meal_type) return false;
             const srvTime = new Date(srv.id).getTime();
             return Math.abs(srvTime - optTime) < 5 * 60 * 1000;
         });
-        return !found;
+        
+        if (found) {
+            // It just successfully synced!
+            found.justSynced = true;
+            return false; // remove from optimistic
+        }
+        return true;
     });
 
     historyData = [...optimistic, ...serverData];
@@ -519,21 +525,29 @@ function renderHistoryCards() {
 
       let syncHtml = '';
       if (entry.syncing) {
-          const elapsedSecs = (Date.now() - entry.loggedAt) / 1000;
-          const remainingSecs = Math.max(0, 420 - elapsedSecs); // 7 minutes estimate
-          const percentDone = Math.min(100, (elapsedSecs / 420) * 100);
-          
+          const elapsed = Math.floor((Date.now() - entry.loggedAt) / 1000);
+          const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+          const s = (elapsed % 60).toString().padStart(2, '0');
           syncHtml = `
-            <div class="sync-indicator" style="margin-top: 1rem; background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.06);">
+            <div class="sync-indicator" data-sync-start="${entry.loggedAt}" style="margin-top: 1rem; background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.06);">
               <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-dim); margin-bottom:8px; font-weight:600;">
                 <span style="display:flex; align-items:center; gap:6px; color:var(--accent);"><i data-lucide="loader-2" class="spin" style="width:14px;height:14px;"></i> Syncing to Google Health...</span>
-                <span>Est. ~7 mins</span>
+                <span class="sync-timer">${m}:${s} elapsed</span>
               </div>
-              <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden;">
-                <div style="height:100%; width:100%; background:var(--accent); transform-origin:left; transform: scaleX(${percentDone/100}); animation: syncFill ${remainingSecs}s linear forwards;"></div>
+              <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; position:relative;">
+                <div class="shimmer-bar" style="height:100%; width:40%; background:var(--accent); border-radius:999px; position:absolute; left:0; top:0;"></div>
               </div>
             </div>
           `;
+      } else if (entry.justSynced) {
+          syncHtml = `
+            <div class="sync-success animate-in" style="margin-top: 1rem; background: rgba(82, 168, 116, 0.1); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid rgba(82, 168, 116, 0.2);">
+              <div style="display:flex; align-items:center; gap:6px; color:#52a874; font-size:0.8rem; font-weight:600;">
+                <i data-lucide="check-circle-2" style="width:16px;height:16px;"></i> Successfully synced to Google Health!
+              </div>
+            </div>
+          `;
+          entry.justSynced = false; // only show once
       }
 
       return `
@@ -666,3 +680,18 @@ function autoSelectMealTime() {
 document.addEventListener('DOMContentLoaded', () => {
   autoSelectMealTime();
 });
+
+// ── Background Timers ─────────────────────────────────────────────────────
+setInterval(() => {
+    document.querySelectorAll('.sync-indicator').forEach(el => {
+        const start = parseInt(el.getAttribute('data-sync-start'), 10);
+        if (!start) return;
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+        const s = (elapsed % 60).toString().padStart(2, '0');
+        const timerEl = el.querySelector('.sync-timer');
+        if (timerEl) {
+            timerEl.textContent = `${m}:${s} elapsed`;
+        }
+    });
+}, 1000);
