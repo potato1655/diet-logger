@@ -155,6 +155,13 @@ function renderDailyDashboard(meals) {
     <div class="dash-section-label">TODAY'S PROGRESS</div>
     <div class="dash-macros">${macroHtml}</div>
     ${microHtml}
+    
+    <div id="ai-week-insight-container" style="margin-top: 1.5rem; margin-bottom: 0.5rem;">
+      <button onclick="getWeekInsight()" class="btn-ai-insight" style="width: 100%; background: var(--bg-raised); border: 1px solid var(--border); padding: 0.85rem; border-radius: var(--radius); color: var(--text); cursor: pointer; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: inherit; transition: all 0.2s;">
+        <i data-lucide="sparkles" style="width: 16px; height: 16px; color: var(--accent);"></i>
+        Weekly AI Summary
+      </button>
+    </div>
   `;
   
   // Need to render the new chevron icons
@@ -697,6 +704,14 @@ async function loadHistory() {
             <span class="macro-pill macro-pill-fat">${entry.totals.fat_g}g F</span>
           </div>
           <div class="history-foods">${foodList}</div>
+          
+          <div id="ai-insight-container-${entry.id}" style="margin-top: 0.75rem;">
+            <button onclick="getMealInsight('${entry.id}')" class="btn-ai-insight" style="background: none; border: 1px solid var(--border); padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 0.4rem; font-family: inherit; transition: all 0.2s;">
+              <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--accent);"></i>
+              Meal Insight
+            </button>
+          </div>
+
           ${nutrientsHtml ? `
           <details class="nutrients-dropdown">
             <summary>Show full nutrients</summary>
@@ -798,3 +813,77 @@ function autoSelectMealTime() {
 document.addEventListener('DOMContentLoaded', () => {
   autoSelectMealTime();
 });
+
+// ── AI Insights ────────────────────────────────────────────────────────────
+async function getMealInsight(mealId) {
+  const entry = historyData.find(e => e.id === mealId);
+  if (!entry) return;
+  
+  const container = document.getElementById(`ai-insight-container-${mealId}`);
+  if (!container) return;
+  
+  container.innerHTML = `<div style="color: var(--text-dim); font-size: 0.8rem; padding: 0.5rem; background: var(--bg-raised); border-radius: var(--radius-sm); border: 1px solid var(--border);"><i data-lucide="loader-2" class="spin" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"></i> Generating insight...</div>`;
+  lucide.createIcons();
+  
+  try {
+    const res = await fetch('/analyze/meal-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meal: entry })
+    });
+    const data = await res.json();
+    if (data.success) {
+      container.innerHTML = `
+        <div style="background: var(--bg-raised); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 0.85rem; color: var(--text); line-height: 1.5; position: relative;">
+          <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--accent); float: left; margin-top: 2px; margin-right: 6px;"></i>
+          ${escHtml(data.summary).replace(/\n/g, '<br>')}
+        </div>
+      `;
+    } else {
+      container.innerHTML = `<div style="color: var(--red); font-size: 0.8rem;">Failed to get insight: ${data.error}</div>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<div style="color: var(--red); font-size: 0.8rem;">Error: ${e.message}</div>`;
+  }
+  lucide.createIcons();
+}
+
+async function getWeekInsight() {
+  const container = document.getElementById('ai-week-insight-container');
+  if (!container || !historyData.length) return;
+  
+  container.innerHTML = `
+    <div style="background: var(--bg-raised); border: 1px solid var(--border); padding: 1rem; border-radius: var(--radius); text-align: center;">
+      <i data-lucide="loader-2" class="spin" style="width:24px;height:24px;color:var(--accent);margin-bottom:0.5rem;"></i>
+      <div style="color: var(--text-muted); font-size: 0.85rem;">Analyzing your week...</div>
+    </div>
+  `;
+  lucide.createIcons();
+  
+  try {
+    const res = await fetch('/analyze/week-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meals: historyData })
+    });
+    const data = await res.json();
+    if (data.success) {
+      container.innerHTML = `
+        <div style="background: var(--bg-raised); border: 1px solid var(--border); padding: 1rem; border-radius: var(--radius); position: relative;">
+          <h4 style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: var(--text); display: flex; align-items: center; gap: 0.4rem;">
+            <i data-lucide="sparkles" style="width: 16px; height: 16px; color: var(--accent);"></i>
+            Weekly AI Insight
+          </h4>
+          <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+            ${escHtml(data.summary).replace(/\n/g, '<br>')}
+          </div>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `<div style="color: var(--red); font-size: 0.85rem; padding: 1rem; background: var(--bg-raised); border-radius: var(--radius);">Failed to get insight: ${data.error}</div>`;
+    }
+  } catch (e) {
+    container.innerHTML = `<div style="color: var(--red); font-size: 0.85rem; padding: 1rem; background: var(--bg-raised); border-radius: var(--radius);">Error: ${e.message}</div>`;
+  }
+  lucide.createIcons();
+}

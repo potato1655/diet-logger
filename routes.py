@@ -153,6 +153,58 @@ Return ONLY a valid JSON object matching the exact structure above. No explanati
             current_app.logger.error(f"Refine error: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @app.route('/analyze/meal-summary', methods=['POST'])
+    def analyze_meal_summary():
+        data = request.get_json()
+        if not data or 'meal' not in data:
+            return jsonify({'success': False, 'error': 'No meal data provided'}), 400
+            
+        meal = data['meal']
+        prompt = f"""You are a helpful and encouraging nutrition AI.
+I just ate this meal:
+{json.dumps(meal, indent=2)}
+
+Give a very brief (1-3 sentences) insight into this meal. Mention if it's well-balanced, what macros/micros stand out, or what I could pair it with next time to improve it. Keep it conversational, friendly, and short. Do not use markdown headers, just plain text or simple bolding."""
+        try:
+            response = call_gemini_with_retry(prompt)
+            return jsonify({'success': True, 'summary': response.text.strip()})
+        except Exception as e:
+            current_app.logger.error(f"Meal summary error: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/analyze/week-summary', methods=['POST'])
+    def analyze_week_summary():
+        data = request.get_json()
+        if not data or 'meals' not in data:
+            return jsonify({'success': False, 'error': 'No meals provided'}), 400
+            
+        meals = data['meals']
+        
+        # Summarize by day to keep the prompt size reasonable
+        summary_data = []
+        for m in meals:
+            summary_data.append({
+                'date': m.get('id', '')[:10],
+                'type': m.get('meal_type'),
+                'calories': m.get('totals', {}).get('calories', 0),
+                'protein': m.get('totals', {}).get('protein_g', 0),
+                'carbs': m.get('totals', {}).get('carbs_g', 0),
+                'fat': m.get('totals', {}).get('fat_g', 0),
+                'fiber': m.get('totals', {}).get('fiber_g', 0),
+            })
+            
+        prompt = f"""You are a helpful and encouraging nutrition AI.
+Here is a summary of my logged meals over the past few days (up to 7 days):
+{json.dumps(summary_data, indent=2)}
+
+Give me a high-level summary of my eating habits. Highlight what I am doing well, what I might be missing out on (e.g., low protein, low fiber), and general suggestions for improvement. Keep it to 2-3 short paragraphs. Be motivating!"""
+        try:
+            response = call_gemini_with_retry(prompt)
+            return jsonify({'success': True, 'summary': response.text.strip()})
+        except Exception as e:
+            current_app.logger.error(f"Week summary error: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @app.route('/log', methods=['POST'])
     def log_meal():
         data = request.get_json()
