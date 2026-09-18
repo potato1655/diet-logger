@@ -61,7 +61,7 @@ html, body {
 .btn-google:hover { background: #5ebe84; }
 
 /* ── App shell ── */
-#app { display: flex; flex-direction: column; height: 100vh; }
+#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
 header {
   background: var(--bg-raised); color: var(--text);
@@ -80,7 +80,7 @@ header {
 
 main {
   flex: 1; overflow-y: auto; overflow-x: hidden;
-  padding: 1rem; padding-bottom: 100px; /* clear floating nav */
+  padding: 1rem; padding-bottom: 150px; /* ample clear space for floating nav and mobile UI */
   -webkit-overflow-scrolling: touch;
 }
 
@@ -507,4 +507,25 @@ main {
 
 .dash-micro-val {
   font-size: .65rem; color: var(--text-dim);
+}
+
+/* Collapsible micro groups */
+.dash-micro-group summary {
+  outline: none;
+}
+.dash-micro-group summary i {
+  transition: transform 0.3s ease;
+}
+.dash-micro-group[open] summary i {
+  transform: rotate(180deg);
+}
+.dash-micro-group-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.4s ease;
+}
+.dash-micro-group[open] .dash-micro-group-content {
+  max-height: 2000px;
+  opacity: 1;
 }

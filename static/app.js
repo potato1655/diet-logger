@@ -137,8 +137,15 @@ function renderDailyDashboard(meals) {
     for (const [groupName, items] of Object.entries(groups)) {
       if (items.length > 0) {
         microHtml += `
-          <div class="dash-section-label">${groupName}</div>
-          <div class="dash-micros-grid">${items.join('')}</div>
+          <details class="dash-micro-group" style="margin-bottom: 0.25rem;">
+            <summary class="dash-section-label" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; padding: 0.4rem 0;">
+              ${groupName}
+              <i data-lucide="chevron-down" style="width: 14px; height: 14px; opacity: 0.7;"></i>
+            </summary>
+            <div class="dash-micro-group-content">
+              <div class="dash-micros-grid">${items.join('')}</div>
+            </div>
+          </details>
         `;
       }
     }
@@ -149,6 +156,9 @@ function renderDailyDashboard(meals) {
     <div class="dash-macros">${macroHtml}</div>
     ${microHtml}
   `;
+  
+  // Need to render the new chevron icons
+  setTimeout(() => lucide.createIcons(), 0);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
