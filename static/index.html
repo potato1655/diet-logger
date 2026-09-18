@@ -24,6 +24,7 @@
 
 <!-- Main app -->
 <div id="app" class="hidden">
+  <div id="bg-glow"></div>
 
   <!-- Header -->
   <header>
@@ -134,24 +135,30 @@
   </main>
 
   <!-- Navigation -->
-  <nav class="bottom-nav frosted">
+  <nav class="bottom-nav">
     <button class="nav-btn active" onclick="switchTab('home', this)">
-      <i data-lucide="home" style="width:24px;height:24px;"></i>
-      <span>Home</span>
+      <div class="nav-btn-inner">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Home</span>
+      </div>
     </button>
     <button class="nav-btn" onclick="switchTab('log', this)">
-      <i data-lucide="pen-line" style="width:24px;height:24px;"></i>
-      <span>Log</span>
+      <div class="nav-btn-inner">
+        <i data-lucide="plus-circle"></i>
+        <span>Log</span>
+      </div>
     </button>
     <button class="nav-btn" onclick="switchTab('history', this)">
-      <i data-lucide="clock" style="width:24px;height:24px;"></i>
-      <span>History</span>
+      <div class="nav-btn-inner">
+        <i data-lucide="history"></i>
+        <span>History</span>
+      </div>
     </button>
   </nav>
 
 </div>
 
-<script src="/app.js?v=19"></script>
+<script src="/app.js?v=20"></script>
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {

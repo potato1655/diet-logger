@@ -61,10 +61,21 @@ html, body {
 .btn-google:hover { background: #5ebe84; }
 
 /* ── App shell ── */
-#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: relative; }
+
+#bg-glow {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50vh;
+  background: radial-gradient(circle at 50% -50px, var(--glow-color, transparent) 0%, transparent 80%);
+  z-index: 0;
+  pointer-events: none;
+  transition: background 1s ease;
+  opacity: 0.25;
+}
 
 header {
-  background: var(--bg-raised); color: var(--text);
+  background: transparent; color: var(--text);
   padding: .9rem 1.2rem; display: flex;
   align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 10;
@@ -99,12 +110,21 @@ main {
 .nav-btn {
   flex: 1; border: none; background: none; display: flex;
   flex-direction: column; align-items: center; justify-content: center;
-  gap: .25rem; cursor: pointer; color: var(--text-dim); font-size: .75rem;
-  font-weight: 500; font-family: inherit;
-  transition: color 0.3s ease, transform 0.3s ease;
+  cursor: pointer; color: var(--text-dim);
+  font-family: inherit; transition: all 0.3s ease;
+  position: relative;
 }
-.nav-btn:hover { color: var(--text-muted); }
-.nav-btn.active { color: var(--accent); transform: scale(1.05); }
+.nav-btn-inner {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.25rem; font-size: 0.75rem; font-weight: 500;
+  padding: 0.4rem 1rem; border-radius: 999px;
+  transition: all 0.3s ease;
+}
+.nav-btn:hover .nav-btn-inner { color: var(--text-muted); }
+.nav-btn.active .nav-btn-inner { 
+  background: rgba(142, 200, 242, 0.15); /* A nice subtle blue, similar to the screenshot */
+  color: #8ec8f2;
+}
 
 /* Tab transitions */
 .tab-content {

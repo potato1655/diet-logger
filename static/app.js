@@ -82,27 +82,56 @@ function renderDailyDashboard(meals) {
     });
   });
   
-  // Render macro progress bars
-  let macroHtml = '';
-  for (const [key, info] of Object.entries(DAILY_TARGETS.macros)) {
+  // ── Dynamic Glow ──
+  const cals = Math.round(sums.calories || 0);
+  const targetCals = DAILY_TARGETS.macros.calories.target;
+  const pctCals = (cals / targetCals) * 100;
+  
+  let glowColor = 'transparent';
+  if (cals > targetCals + 100) glowColor = '#ff5e5e'; // Red (over limit)
+  else if (cals > targetCals - 300) glowColor = '#f2a93b'; // Amber (approaching)
+  else glowColor = '#6dbf8d'; // Green (plenty of room)
+  document.documentElement.style.setProperty('--glow-color', glowColor);
+
+  // ── Hero Macros ──
+  const diff = targetCals - cals;
+  const isOver = diff < 0;
+  const diffText = isOver ? `${Math.abs(diff)} kcal over` : `+${diff} kcal rem.`;
+  const diffColor = isOver ? 'var(--red)' : 'var(--accent)';
+  const diffBg = isOver ? 'rgba(255,94,94,0.15)' : 'rgba(109,191,141,0.15)';
+  const diffIcon = isOver ? 'arrow-up-right' : 'arrow-down-right';
+
+  let macroHtml = `
+    <div class="hero-metric-container" style="text-align: center; margin: 1.5rem 0 2rem 0; z-index: 1; position: relative;">
+      <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Calories Eaten</div>
+      <div style="font-size: 3.5rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text); line-height: 1; margin-bottom: 0.75rem;">${cals.toLocaleString()}</div>
+      <div style="display: flex; justify-content: center;">
+        <span style="background: ${diffBg}; color: ${diffColor}; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+          <i data-lucide="${diffIcon}" style="width:14px; height:14px;"></i>
+          ${diffText}
+        </span>
+      </div>
+    </div>
+    
+    <div class="hero-macros-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 2rem; background: var(--card); padding: 12px; border-radius: 16px; border: 1px solid var(--border);">
+  `;
+
+  for (const key of ['protein_g', 'carbs_g', 'fat_g']) {
+    const info = DAILY_TARGETS.macros[key];
     const current = Math.round(sums[key] || 0);
     const pct = Math.min(Math.round((current / info.target) * 100), 100);
-    const over = current > info.target;
-    const barColor = key === 'calories' ? '#c8b888' :
-                     key === 'protein_g' ? '#7cb8e0' :
-                     key === 'carbs_g' ? '#d8a850' :
-                     key === 'fat_g' ? '#c8b090' : '#4a9e6e';
+    const barColor = key === 'protein_g' ? '#7cb8e0' : key === 'carbs_g' ? '#d8a850' : '#c8b090';
     macroHtml += `
-      <div class="dash-macro">
-        <div class="dash-macro-header">
-          <span class="dash-macro-label">${info.label}</span>
-          <span class="dash-macro-value">${current}<span class="dash-macro-unit"> / ${info.target}${info.unit}</span></span>
+      <div class="hero-macro-item" style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">${info.label}</div>
+        <div style="font-size: 0.95rem; font-weight: 600;">${current} <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 400;">/ ${info.target}g</span></div>
+        <div style="height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 4px; overflow: hidden;">
+          <div style="width: ${pct}%; background: ${barColor}; height: 100%; border-radius: 2px;"></div>
         </div>
-        <div class="dash-progress-track">
-          <div class="dash-progress-fill ${over ? 'over' : ''}" style="width:${pct}%; background:${barColor}"></div>
-        </div>
-      </div>`;
+      </div>
+    `;
   }
+  macroHtml += `</div>`;
   
   // Render micro progress (only the ones that have data)
   let microHtml = '';
@@ -162,13 +191,12 @@ function renderDailyDashboard(meals) {
   }
   
   container.innerHTML = `
-    <div class="dash-section-label">TODAY'S PROGRESS</div>
-    <div class="dash-macros">${macroHtml}</div>
+    ${macroHtml}
     ${microHtml}
     
-    <div id="ai-week-insight-container" style="margin-top: 1.5rem; margin-bottom: 0.5rem;">
-      <button onclick="getWeekInsight()" class="btn-ai-insight" style="width: 100%; background: var(--bg-raised); border: 1px solid var(--border); padding: 0.85rem; border-radius: var(--radius); color: var(--text); cursor: pointer; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: inherit; transition: all 0.2s;">
-        <i data-lucide="sparkles" style="width: 16px; height: 16px; color: var(--accent);"></i>
+    <div id="ai-week-insight-container" style="margin-top: 2rem; margin-bottom: 0.5rem;">
+      <button onclick="getWeekInsight()" class="btn-ai-insight" style="width: 100%; background: var(--bg-raised); border: 1px solid var(--border); padding: 1rem; border-radius: 16px; color: var(--text); cursor: pointer; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.6rem; font-family: inherit; transition: all 0.2s;">
+        <i data-lucide="sparkles" style="width: 18px; height: 18px; color: var(--accent);"></i>
         Weekly AI Summary
       </button>
     </div>
