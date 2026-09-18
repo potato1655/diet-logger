@@ -615,9 +615,6 @@ async function deleteEntry(id) {
         el.style.opacity = '0.5';
     }
 
-    const entry = historyData.find(e => e.id === id);
-    if (!entry) return;
-
     try {
         const res = await fetch('/log/delete', {
             method: 'POST',
