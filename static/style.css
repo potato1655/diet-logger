@@ -3,35 +3,35 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:         #141414;
-  --bg-raised:  #1c1c1c;
-  --card:       #232323;
-  --card-hover: #2a2a2a;
-  --border:     #333;
-  --border-light:#444;
-  --text:       #e0e0e0;
-  --text-muted: #888;
-  --text-dim:   #666;
-  --accent:     #4a9e6e;
-  --accent-bg:  rgba(74,158,110,.12);
-  --accent-border: rgba(74,158,110,.35);
+  --bg:         #1c1a19;
+  --bg-raised:  #242120;
+  --card:       #2c2827;
+  --card-hover: #332f2e;
+  --border:     #3e3937;
+  --border-light:#4d4745;
+  --text:       #e8e4e1;
+  --text-muted: #a39c99;
+  --text-dim:   #7a7471;
+  --accent:     #52a874;
+  --accent-bg:  rgba(82,168,116,.12);
+  --accent-border: rgba(82,168,116,.35);
   --red:        #e55b5b;
   --radius:     10px;
   --radius-sm:  6px;
 
   /* macro pill colors */
-  --pill-kcal-bg:     rgba(180,160,120,.12);
-  --pill-kcal-border: rgba(180,160,120,.35);
-  --pill-kcal-text:   #c8b888;
-  --pill-pro-bg:      rgba(100,160,220,.12);
-  --pill-pro-border:  rgba(100,160,220,.35);
-  --pill-pro-text:    #7cb8e0;
-  --pill-carb-bg:     rgba(220,160,80,.12);
-  --pill-carb-border: rgba(220,160,80,.35);
-  --pill-carb-text:   #d8a850;
-  --pill-fat-bg:      rgba(200,180,150,.12);
-  --pill-fat-border:  rgba(200,180,150,.35);
-  --pill-fat-text:    #c8b090;
+  --pill-kcal-bg:     rgba(223,202,146,.12);
+  --pill-kcal-border: rgba(223,202,146,.35);
+  --pill-kcal-text:   #dfca92;
+  --pill-pro-bg:      rgba(142,200,242,.12);
+  --pill-pro-border:  rgba(142,200,242,.35);
+  --pill-pro-text:    #8ec8f2;
+  --pill-carb-bg:     rgba(235,178,73,.12);
+  --pill-carb-border: rgba(235,178,73,.35);
+  --pill-carb-text:   #ebb249;
+  --pill-fat-bg:      rgba(224,194,155,.12);
+  --pill-fat-border:  rgba(224,194,155,.35);
+  --pill-fat-text:    #e0c29b;
 }
 
 html, body {
@@ -58,7 +58,7 @@ html, body {
   font-weight: 600; cursor: pointer; transition: all .2s;
   font-family: inherit;
 }
-.btn-google:hover { background: #5ab87e; }
+.btn-google:hover { background: #5ebe84; }
 
 /* ── App shell ── */
 #app { display: flex; flex-direction: column; height: 100vh; }
@@ -161,7 +161,7 @@ main { flex: 1; overflow-y: auto; padding: 1rem; padding-bottom: 80px; }
   font-weight: 600; cursor: pointer; margin-bottom: 1rem;
   transition: background .2s; font-family: inherit;
 }
-.btn-analyze:hover { background: #5ab87e; }
+.btn-analyze:hover { background: #5ebe84; }
 
 .btn-log {
   width: 100%; padding: .8rem; background: var(--accent); color: #fff;
@@ -169,7 +169,7 @@ main { flex: 1; overflow-y: auto; padding: 1rem; padding-bottom: 80px; }
   font-weight: 600; cursor: pointer; margin-top: .75rem;
   transition: background .2s; font-family: inherit;
 }
-.btn-log:hover { background: #5ab87e; }
+.btn-log:hover { background: #5ebe84; }
 
 /* ── Spinner ── */
 #spinner { text-align: center; padding: 2rem; color: var(--text-muted); }

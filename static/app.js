@@ -253,7 +253,18 @@ async function analyzeFood() {
   show('spinner');
   hide('food-results');
 
-  const extraText = document.getElementById('extra-text').value.trim();
+  let extraText = document.getElementById('extra-text').value.trim();
+  
+  // Collect AI question answers if they exist
+  const qInputs = document.querySelectorAll('[id^="ai-q-"]');
+  if (qInputs.length > 0) {
+    qInputs.forEach(input => {
+      if (input.value.trim()) {
+         const qText = input.previousElementSibling.innerText;
+         extraText += `\nQ: ${qText} \nA: ${input.value.trim()}`;
+      }
+    });
+  }
 
   try {
     const res  = await fetch('/analyze', {
@@ -278,7 +289,12 @@ async function analyzeFood() {
       const qContainer = document.getElementById('ai-questions-container');
       const qList = document.getElementById('ai-questions-list');
       if (data.questions && data.questions.length > 0) {
-        qList.innerHTML = data.questions.map(q => `<li>${escHtml(q)}</li>`).join('');
+        qList.innerHTML = data.questions.map((q, i) => `
+          <li style="margin-bottom:0.75rem;list-style:none;">
+            <div style="font-weight:500;margin-bottom:0.4rem;color:var(--text);font-size:0.95rem;">${escHtml(q)}</div>
+            <input type="text" id="ai-q-${i}" placeholder="Type your answer here..." style="width:100%;padding:0.6rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--text);" />
+          </li>
+        `).join('');
         qContainer.classList.remove('hidden');
       } else {
         qContainer.classList.add('hidden');
@@ -286,14 +302,15 @@ async function analyzeFood() {
       
       show('food-results');
       show('analyze-btn');
-      document.getElementById('analyze-btn').innerText = '🔄 Re-Analyze with text';
+      document.getElementById('analyze-btn').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:6px;"><i data-lucide="refresh-ccw" style="width:16px;height:16px;"></i> Re-Analyze</div>';
+      lucide.createIcons();
     } else {
-      alert('Analysis failed: ' + data.error);
+      showToast('Analysis failed: ' + data.error, true);
       show('analyze-btn');
     }
   } catch (e) {
     hide('spinner');
-    alert('Error: ' + e.message);
+    showToast('Error: ' + e.message, true);
     show('analyze-btn');
   }
 }
@@ -476,16 +493,18 @@ async function logMeal() {
       const msg = document.getElementById('success-msg');
       msg.querySelector('span').textContent =
         data.health_logged
-          ? '✅ Meal logged to Google Health!'
-          : `✅ Saved locally. (Google Health: ${data.health_message})`;
+          ? 'Meal logged to Google Health!'
+          : `Saved locally. (Google Health: ${data.health_message})`;
       show('success-msg');
+      showToast('Meal logged successfully!');
     } else {
-      alert('Error logging meal');
+      showToast('Error logging meal: ' + (data.error || 'Unknown error'), true);
     }
   } catch (e) {
-    alert('Error: ' + e.message);
+    showToast('Error: ' + e.message, true);
   } finally {
-    btn.textContent = '✅ Log Meal';
+    btn.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:6px;"><i data-lucide="check" style="width:18px;height:18px;"></i> Log Meal</div>';
+    lucide.createIcons();
     btn.disabled = false;
   }
 }
@@ -520,7 +539,14 @@ async function loadHistory() {
     historyData = data;
     renderDailyDashboard(data);
     if (data.length === 0) {
-      list.innerHTML = '<p class="empty-msg">No meals logged yet.</p>';
+      list.innerHTML = `
+        <div class="empty-state" style="text-align:center;padding:3rem 1rem;color:var(--text-muted)">
+          <i data-lucide="utensils-crossed" style="width:48px;height:48px;opacity:0.5;margin-bottom:1rem;"></i>
+          <p style="font-size:1.1rem;margin-bottom:0.5rem;color:var(--text)">No meals logged yet</p>
+          <p style="font-size:0.9rem">Your recent meals from Google Fit will appear here.</p>
+        </div>
+      `;
+      lucide.createIcons();
       return;
     }
     list.innerHTML = data.map(entry => {
@@ -625,13 +651,14 @@ async function deleteEntry(id) {
         
         if (res.ok) {
             loadHistory();
+            showToast('Meal deleted successfully');
         } else {
             const data = await res.json();
-            alert('Failed to delete meal: ' + data.error);
+            showToast('Failed to delete meal: ' + data.error, true);
             document.getElementById(`history-entry-${id}`).style.opacity = '1';
         }
     } catch (e) {
-        alert('Error: ' + e.message);
+        showToast('Error: ' + e.message, true);
         document.getElementById(`history-entry-${id}`).style.opacity = '1';
     }
 }
@@ -642,3 +669,51 @@ function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+function showToast(message, isError = false) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    background: ${isError ? 'var(--red)' : 'var(--accent)'};
+    color: white;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: opacity 0.3s, transform 0.3s;
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: auto;
+  `;
+  toast.textContent = message;
+  container.appendChild(toast);
+  
+  // Animate in
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+  
+  // Remove after 4s
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+function autoSelectMealTime() {
+  const h = new Date().getHours();
+  let meal = 'Snack';
+  if (h >= 5 && h < 11) meal = 'Breakfast';
+  else if (h >= 11 && h < 16) meal = 'Lunch';
+  else if (h >= 16 && h < 22) meal = 'Dinner';
+  
+  const btn = document.querySelector(`.meal-btn[data-meal="${meal}"]`);
+  if (btn) selectMeal(btn);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  autoSelectMealTime();
+});

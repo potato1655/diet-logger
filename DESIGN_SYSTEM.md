@@ -28,25 +28,25 @@ the variable instead.
 
 | Variable | Value | Usage |
 |----------|-------|-------|
-| `--bg` | `#141414` | Page / body background |
-| `--bg-raised` | `#1c1c1c` | Header, tab bar, inset panels |
-| `--card` | `#232323` | Cards, inputs, upload area |
-| `--card-hover` | `#2a2a2a` | Card hover state (use sparingly) |
+| `--bg` | `#1c1a19` | Page / body background (warm charcoal) |
+| `--bg-raised` | `#242120` | Header, tab bar, inset panels |
+| `--card` | `#2c2827` | Cards, inputs, upload area |
+| `--card-hover` | `#332f2e` | Card hover state (use sparingly) |
 
 ### 2.2 Borders
 
 | Variable | Value | Usage |
 |----------|-------|-------|
-| `--border` | `#333` | Default border (cards, inputs, dividers) |
-| `--border-light` | `#444` | Hover-state borders |
+| `--border` | `#3e3937` | Default border (cards, inputs, dividers) |
+| `--border-light` | `#4d4745` | Hover-state borders |
 
 ### 2.3 Text
 
 | Variable | Value | Usage |
 |----------|-------|-------|
-| `--text` | `#e0e0e0` | Primary text (headings, body) |
-| `--text-muted` | `#888` | Secondary text (labels, descriptions, food items) |
-| `--text-dim` | `#666` | Tertiary text (timestamps, units, disabled) |
+| `--text` | `#e8e4e1` | Primary text (headings, body) |
+| `--text-muted` | `#a39c99` | Secondary text (labels, descriptions, food items) |
+| `--text-dim` | `#7a7471` | Tertiary text (timestamps, units, disabled) |
 
 > **Rule:** Never use `#fff` / `white` for text except on filled accent
 > buttons and the auth sign-in button.
@@ -55,11 +55,11 @@ the variable instead.
 
 | Variable | Value | Usage |
 |----------|-------|-------|
-| `--accent` | `#4a9e6e` | Primary action buttons, active tab, progress bar (fiber), left card borders |
-| `--accent-bg` | `rgba(74,158,110,.12)` | Tinted background behind accent elements |
-| `--accent-border` | `rgba(74,158,110,.35)` | Border for accent-tinted containers |
+| `--accent` | `#52a874` | Primary action buttons, active tab, progress bar (fiber), left card borders |
+| `--accent-bg` | `rgba(82,168,116,.12)` | Tinted background behind accent elements |
+| `--accent-border` | `rgba(82,168,116,.35)` | Border for accent-tinted containers |
 
-Hover state for accent buttons: `#5ab87e`.
+Hover state for accent buttons: `#5ebe84`.
 
 ### 2.5 Semantic / Status
 
@@ -74,10 +74,10 @@ are **ONLY** used for macro pills and progress bars. Do not repurpose.
 
 | Macro | `--pill-*-text` | `--pill-*-border` | `--pill-*-bg` | Bar color |
 |-------|----------------|-------------------|--------------|-----------|
-| Calories (kcal) | `#c8b888` (warm gold) | `rgba(180,160,120,.35)` | `rgba(180,160,120,.12)` | `#c8b888` |
-| Protein | `#7cb8e0` (soft blue) | `rgba(100,160,220,.35)` | `rgba(100,160,220,.12)` | `#7cb8e0` |
-| Carbs | `#d8a850` (amber) | `rgba(220,160,80,.35)` | `rgba(220,160,80,.12)` | `#d8a850` |
-| Fat | `#c8b090` (tan) | `rgba(200,180,150,.35)` | `rgba(200,180,150,.12)` | `#c8b090` |
+| Calories (kcal) | `#dfca92` (bright gold) | `rgba(223,202,146,.35)` | `rgba(223,202,146,.12)` | `#dfca92` |
+| Protein | `#8ec8f2` (bright blue) | `rgba(142,200,242,.35)` | `rgba(142,200,242,.12)` | `#8ec8f2` |
+| Carbs | `#ebb249` (bright amber) | `rgba(235,178,73,.35)` | `rgba(235,178,73,.12)` | `#ebb249` |
+| Fat | `#e0c29b` (bright tan) | `rgba(224,194,155,.35)` | `rgba(224,194,155,.12)` | `#e0c29b` |
 | Fiber | — | — | — | `#4a9e6e` (uses accent) |
 
 ### 2.7 Micro-Progress Status Colors
