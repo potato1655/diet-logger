@@ -114,41 +114,51 @@ function renderDailyDashboard(meals) {
     for (const [key, info] of microEntries) {
       const current = Math.round((microSums[key] || 0) * 10) / 10;
       const pct = Math.min(Math.round((current / info.target) * 100), 100);
-      const colorClass = pct >= 100 ? 'complete' : pct >= 50 ? 'partial' : 'low';
-      
-      const itemHtml = `
-        <div class="dash-micro-item">
-          <div class="dash-micro-top">
-            <span class="dash-micro-label">${info.label}</span>
-            <span class="dash-micro-pct ${colorClass}">${pct}%</span>
+      let color = '#ff5e5e'; // red
+      if (pct >= 100) color = 'var(--accent)';
+      else if (pct >= 33) color = '#f2a93b'; // yellow
+
+      const itemObj = {
+        key, pct,
+        html: `
+        <div class="dash-micro-item-mf">
+          <div class="dash-micro-label-mf">${info.label}</div>
+          <div class="dash-micro-track-mf">
+            <div class="dash-micro-fill-mf" style="width:${pct}%; background:${color}"></div>
           </div>
-          <div class="dash-micro-track">
-            <div class="dash-micro-fill ${colorClass}" style="width:${pct}%"></div>
-          </div>
-          <div class="dash-micro-val">${current} / ${info.target} ${info.unit}</div>
-        </div>`;
+          <div class="dash-micro-val-mf">${current} / ${info.target} ${info.unit}</div>
+        </div>`
+      };
         
-      if (key.startsWith('vitamin_')) groups['VITAMINS'].push(itemHtml);
-      else if (['calcium_mg', 'iron_mg', 'potassium_mg', 'sodium_mg', 'zinc_mg', 'magnesium_mg'].includes(key)) groups['MINERALS'].push(itemHtml);
-      else if (key.includes('fat') || key.includes('fiber') || key.includes('omega') || key.includes('cholesterol')) groups['FATS & FIBER'].push(itemHtml);
-      else groups['OTHER'].push(itemHtml);
+      if (key.startsWith('vitamin_')) groups['VITAMINS'].push(itemObj);
+      else if (['calcium_mg', 'iron_mg', 'potassium_mg', 'sodium_mg', 'zinc_mg', 'magnesium_mg'].includes(key)) groups['MINERALS'].push(itemObj);
+      else if (key.includes('fat') || key.includes('fiber') || key.includes('omega') || key.includes('cholesterol')) groups['FATS & FIBER'].push(itemObj);
+      else groups['OTHER'].push(itemObj);
     }
     
-    for (const [groupName, items] of Object.entries(groups)) {
-      if (items.length > 0) {
+    for (const [groupName, itemsObj] of Object.entries(groups)) {
+      if (itemsObj.length > 0) {
+        // Sort by most behind (lowest percentage first)
+        itemsObj.sort((a, b) => a.pct - b.pct);
+        const items = itemsObj.map(i => i.html);
+        
         microHtml += `
-          <details class="dash-micro-group" style="margin-bottom: 0.25rem;">
-            <summary class="dash-section-label" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; padding: 0.4rem 0;">
+          <details class="dash-micro-group-mf" open>
+            <summary class="dash-section-label" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; padding: 1rem 0 0.6rem 0; outline: none;">
               ${groupName}
-              <i data-lucide="chevron-down" style="width: 14px; height: 14px; opacity: 0.7;"></i>
+              <div style="display: flex; align-items: center; gap: 4px; color: var(--text-dim); text-transform: none; font-size: 0.75rem; font-weight: 500; letter-spacing: 0;">
+                <span class="mf-toggle-text">Collapse</span>
+                <i data-lucide="chevron-up" class="mf-chevron" style="width: 14px; height: 14px;"></i>
+              </div>
             </summary>
-            <div class="dash-micro-group-content">
-              <div class="dash-micros-grid">${items.join('')}</div>
+            <div class="dash-micro-group-content-mf">
+              <div class="dash-micros-grid-mf">${items.join('')}</div>
             </div>
           </details>
         `;
       }
     }
+    microHtml += `<div style="text-align: center; color: var(--text-dim); font-size: 0.65rem; margin-top: 1rem; margin-bottom: 0.5rem;">sorted by most behind</div>`;
   }
   
   container.innerHTML = `

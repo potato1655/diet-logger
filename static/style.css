@@ -505,29 +505,66 @@ main {
 .dash-micro-fill.partial  { background: #d8a850; }
 .dash-micro-fill.low      { background: #e55b5b; }
 
-.dash-micro-val {
-  font-size: .65rem; color: var(--text-dim);
-}
-
-/* Collapsible micro groups */
-.dash-micro-group summary {
+/* MacroFactor-style micro groups */
+.dash-micro-group-mf summary {
   outline: none;
 }
-.dash-micro-group summary i {
+.dash-micro-group-mf .mf-chevron {
   transition: transform 0.3s ease;
 }
-.dash-micro-group[open] summary i {
+.dash-micro-group-mf:not([open]) .mf-chevron {
   transform: rotate(180deg);
 }
-.dash-micro-group-content {
+
+.dash-micro-group-mf .mf-toggle-text { font-size: 0; }
+.dash-micro-group-mf[open] .mf-toggle-text::before { content: "Collapse"; font-size: 0.75rem; }
+.dash-micro-group-mf:not([open]) .mf-toggle-text::before { content: "Expand all"; font-size: 0.75rem; }
+
+.dash-micro-group-content-mf {
   max-height: 0;
   opacity: 0;
   overflow: hidden;
   transition: max-height 0.4s ease, opacity 0.4s ease;
 }
-.dash-micro-group[open] .dash-micro-group-content {
+.dash-micro-group-mf[open] .dash-micro-group-content-mf {
   max-height: 2000px;
   opacity: 1;
+}
+
+.dash-micros-grid-mf {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.dash-micro-item-mf {
+  background: var(--bg-raised);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dash-micro-label-mf {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.dash-micro-track-mf {
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+.dash-micro-fill-mf {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.dash-micro-val-mf {
+  font-size: 0.7rem;
+  color: var(--text-dim);
 }
 
 @keyframes spin {
