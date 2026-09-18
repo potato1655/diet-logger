@@ -14,9 +14,9 @@ def call_groq_summary(prompt):
         "Content-Type": "application/json"
     }
     
-    # Using Llama 3.1 8B, current fast model for Groq
+    # Using Llama 3 8B
     data = {
-        "model": "llama-3.1-8b-instant",
+        "model": "llama3-8b-8192",
         "messages": [
             {
                 "role": "user",
