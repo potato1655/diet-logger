@@ -1,4 +1,4 @@
-﻿// ── State ─────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────
 let currentFoods   = [];
 let selectedMeal   = 'Lunch';
 let currentImageB64 = null;
@@ -161,12 +161,16 @@ function renderDailyDashboard(meals) {
       const itemObj = {
         key, pct,
         html: `
-        <div class="dash-micro-item-mf">
-          <div class="dash-micro-label-mf">${info.label}</div>
-          <div class="dash-micro-track-mf">
-            <div class="dash-micro-fill-mf" style="width:${pct}%; background:${color}"></div>
+        <div style="background: var(--bg-raised); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <div style="font-size: 0.9rem; font-weight: 500; color: var(--text);">${info.label}</div>
           </div>
-          <div class="dash-micro-val-mf">${current} / ${info.target} ${info.unit}</div>
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">${current} / ${info.target} <span style="font-size: 0.7rem;">${info.unit}</span></div>
+            <div style="height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; display: flex;">
+              <div style="width:${pct}%; background:${color}; height: 100%; border-radius: 2px;"></div>
+            </div>
+          </div>
         </div>`
       };
         
@@ -178,23 +182,16 @@ function renderDailyDashboard(meals) {
     
     for (const [groupName, itemsObj] of Object.entries(groups)) {
       if (itemsObj.length > 0) {
-        // Sort by most behind (lowest percentage first)
         itemsObj.sort((a, b) => a.pct - b.pct);
         const items = itemsObj.map(i => i.html);
         
         microHtml += `
-          <details class="dash-micro-group-mf" open>
-            <summary class="dash-section-label" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; padding: 1rem 0 0.6rem 0; outline: none;">
-              ${groupName}
-              <div style="display: flex; align-items: center; gap: 4px; color: var(--text-dim); text-transform: none; font-size: 0.75rem; font-weight: 500; letter-spacing: 0;">
-                <span class="mf-toggle-text">Collapse</span>
-                <i data-lucide="chevron-up" class="mf-chevron" style="width: 14px; height: 14px;"></i>
-              </div>
-            </summary>
-            <div class="dash-micro-group-content-mf">
-              <div class="dash-micros-grid-mf">${items.join('')}</div>
-            </div>
-          </details>
+          <div style="margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; padding-left: 4px;">
+            ${groupName}
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            ${items.join('')}
+          </div>
         `;
       }
     }
