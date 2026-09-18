@@ -449,6 +449,15 @@ async function logMeal() {
 
   const timeVal = document.getElementById('meal-time').value; // e.g. "14:30"
   
+  // Calculate exact timestamp on the client to avoid server timezone bugs
+  let timestamp = null;
+  if (timeVal) {
+    const [h, m] = timeVal.split(':');
+    const d = new Date();
+    d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+    timestamp = d.getTime();
+  }
+  
   try {
     const res  = await fetch('/log', {
       method: 'POST',
@@ -456,7 +465,8 @@ async function logMeal() {
       body: JSON.stringify({ 
           foods: currentFoods, 
           meal_type: selectedMeal,
-          time: timeVal
+          time: timeVal,
+          timestamp: timestamp
       }),
     });
     const data = await res.json();

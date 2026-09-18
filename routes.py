@@ -168,10 +168,13 @@ Return ONLY a valid JSON object matching the exact structure above. No explanati
         }
 
         time_str = data.get('time')
-        health_ok, health_msg, fit_dataset_ids = log_to_google_fit(foods, meal_type, time_str)
+        timestamp = data.get('timestamp')
+        health_ok, health_msg, fit_dataset_ids = log_to_google_fit(foods, meal_type, time_str, timestamp)
         
         base_time = datetime.now(timezone.utc)
-        if time_str:
+        if timestamp:
+            base_time = datetime.fromtimestamp(timestamp / 1000.0, timezone.utc)
+        elif time_str:
             try:
                 h, m = map(int, time_str.split(':'))
                 local_now = datetime.now()

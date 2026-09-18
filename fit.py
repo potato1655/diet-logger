@@ -45,7 +45,7 @@ def ensure_data_source(headers):
             
     raise RuntimeError(f'Could not create data source: {r.text}')
 
-def log_to_google_fit(foods, meal_type, time_str=None):
+def log_to_google_fit(foods, meal_type, time_str=None, timestamp=None):
     creds = load_credentials()
     if not creds:
         return False, 'Not authenticated: credentials missing.', []
@@ -69,7 +69,9 @@ def log_to_google_fit(foods, meal_type, time_str=None):
     dataset_ids = []
     
     base_time = datetime.now(timezone.utc)
-    if time_str:
+    if timestamp:
+        base_time = datetime.fromtimestamp(timestamp / 1000.0, timezone.utc)
+    elif time_str:
         try:
             h, m = map(int, time_str.split(':'))
             local_now = datetime.now()
