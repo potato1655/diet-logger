@@ -356,9 +356,17 @@ async function logMeal() {
   btn.disabled = true;
 
   const timeVal = document.getElementById('meal-time').value;
+  const dateVal = document.getElementById('meal-date').value;
 
   let timestamp = null;
-  if (timeVal) {
+  if (timeVal && dateVal) {
+    const [h, m] = timeVal.split(':');
+    const [year, month, day] = dateVal.split('-');
+    const d = new Date();
+    d.setFullYear(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+    d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+    timestamp = d.getTime();
+  } else if (timeVal) {
     const [h, m] = timeVal.split(':');
     const d = new Date();
     d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
@@ -669,6 +677,22 @@ function spawnConfetti() {
 }
 
 function autoSelectMealTime() {
+  const timeInput = document.getElementById('meal-time');
+  const dateInput = document.getElementById('meal-date');
+  if (timeInput && !timeInput.value) {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    timeInput.value = `${hh}:${mm}`;
+  }
+  if (dateInput && !dateInput.value) {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    dateInput.value = `${yyyy}-${mm}-${dd}`;
+  }
+
   const h = new Date().getHours();
   let meal = 'Snack';
   if (h >= 5 && h < 11) meal = 'Breakfast';
