@@ -587,12 +587,31 @@ async function loadHistory() {
       lucide.createIcons();
       return;
     }
+    let currentDayStr = '';
+    
     list.innerHTML = data.map(entry => {
       const mealIcons = { Breakfast: '☀️', Lunch: '🍽️', Dinner: '🌙', Snack: '🍎', Other: '📋' };
       const icon = mealIcons[entry.meal_type] || '📋';
       const d = new Date(entry.id);
       const timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       const dateStr = d.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'});
+      
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      let dayGroupLabel = dateStr;
+      if (d.toDateString() === today.toDateString()) {
+        dayGroupLabel = 'Today';
+      } else if (d.toDateString() === yesterday.toDateString()) {
+        dayGroupLabel = 'Yesterday';
+      }
+      
+      let dayHeaderHtml = '';
+      if (dayGroupLabel !== currentDayStr) {
+        currentDayStr = dayGroupLabel;
+        dayHeaderHtml = `<div class="history-day-separator" style="margin-top: 1.25rem; margin-bottom: 0.6rem; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; padding-left: 0.25rem;">${dayGroupLabel}</div>`;
+      }
       
       const foodList = entry.foods.map(f => 
         `<div class="history-food-item">${f.quantity ? f.quantity + ' ' : ''}${f.name}</div>`
@@ -647,23 +666,25 @@ async function loadHistory() {
       }
       
       return `
+      ${dayHeaderHtml}
       <div class="history-card" id="history-entry-${entry.id}">
         <div class="history-card-inner">
           <div class="history-header">
             <div class="history-meal-info">
               <div class="history-meal-icon">${icon}</div>
               <div class="history-meal-text">
-                <span class="history-meal">${entry.meal_type}</span>
-                <span class="history-time">${dateStr} · ${timeStr}</span>
+                <span class="history-meal">${entry.meal_type} <span style="font-weight:400; color:var(--text-dim); margin-left:6px; font-size:0.8rem;">${timeStr}</span></span>
               </div>
             </div>
-            <div class="history-pills">
-              <span class="macro-pill macro-pill-kcal">${Math.round(entry.totals.calories)} kcal</span>
-              <span class="macro-pill macro-pill-pro">${entry.totals.protein_g}g P</span>
-              <span class="macro-pill macro-pill-carb">${entry.totals.carbs_g}g C</span>
-              <span class="macro-pill macro-pill-fat">${entry.totals.fat_g}g F</span>
-              <button onclick="deleteEntry('${entry.id}')" class="btn-delete-meal" title="Delete Meal">🗑️</button>
-            </div>
+            <button onclick="deleteEntry('${entry.id}')" class="btn-delete-meal" title="Delete Meal">
+              <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+            </button>
+          </div>
+          <div class="history-pills" style="margin-bottom:0.75rem;">
+            <span class="macro-pill macro-pill-kcal">${Math.round(entry.totals.calories)} kcal</span>
+            <span class="macro-pill macro-pill-pro">${entry.totals.protein_g}g P</span>
+            <span class="macro-pill macro-pill-carb">${entry.totals.carbs_g}g C</span>
+            <span class="macro-pill macro-pill-fat">${entry.totals.fat_g}g F</span>
           </div>
           <div class="history-foods">${foodList}</div>
           ${nutrientsHtml ? `
@@ -676,6 +697,9 @@ async function loadHistory() {
         </div>
       </div>`;
     }).join('');
+    
+    // Instantiate lucide icons for trash bin
+    setTimeout(() => lucide.createIcons(), 0);
   } catch (e) {
     list.innerHTML = '<p class="empty-msg">Could not load history.</p>';
   }

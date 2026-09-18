@@ -317,10 +317,10 @@ main {
 .history-card-inner { padding: .85rem 1rem; }
 
 .history-header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: .65rem;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: .4rem;
 }
-.history-meal-info { display: flex; align-items: center; gap: .6rem; }
+.history-meal-info { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .history-meal-icon {
   width: 32px; height: 32px; border-radius: 50%;
   background: var(--accent-bg); border: 1px solid var(--accent-border);
@@ -328,7 +328,7 @@ main {
   font-size: .85rem; flex-shrink: 0;
 }
 .history-meal-text .history-meal {
-  font-weight: 600; font-size: .95rem; display: block;
+  font-weight: 600; font-size: .95rem; display: flex; align-items: center;
 }
 .history-meal-text .history-time {
   color: var(--text-dim); font-size: .78rem; display: block; margin-top: .1rem;
