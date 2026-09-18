@@ -266,13 +266,16 @@ Used for dashboard headers ("TODAY'S PROGRESS", "MICRONUTRIENTS", "PAST MEALS").
 │    tab-content panels           │
 │                                 │
 ├─────────────────────────────────┤
-│  Tab bar (fixed bottom)         │  60px
+│    ┌───────────────────────┐    │
+│    │ Tab bar (frosted)     │    │
+│    └───────────────────────┘    │
 └─────────────────────────────────┘
 ```
 
 - Header: `position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border)`
-- Tab bar: `position: fixed; bottom: 0; z-index: 10; border-top: 1px solid var(--border)`
-- Main: `padding-bottom: 80px` to clear tab bar
+- Tab bar: `position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10; border: 1px solid var(--border); border-radius: 999px; background: rgba(36, 33, 32, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);` (floating inset appearance, frosted glass)
+- Main: `padding-bottom: 100px` to clear the floating tab bar
+- Tab transitions: Animate color and scale smoothly on active tabs. Use smooth cross-fade or slide for panel transitions.
 
 ### 6.2 History Card Layout
 
@@ -291,7 +294,7 @@ Used for dashboard headers ("TODAY'S PROGRESS", "MICRONUTRIENTS", "PAST MEALS").
 └──────────────────────────────────────────────────┘
 ```
 
-### 6.3 Daily Dashboard Layout
+### 6.3 Daily Dashboard Layout (Home Tab)
 
 ```
 TODAY'S PROGRESS (uppercase label)
@@ -307,9 +310,23 @@ TODAY'S PROGRESS (uppercase label)
 │  └──────────────┘  └──────────────┘      │
 └──────────────────────────────────────────┘
 
-MICRONUTRIENTS (uppercase label)
+VITAMINS (uppercase label)
 ┌──────────┐ ┌──────────┐    (2-col grid of micro-cards)
-│ Vit C    │ │ Iron     │
+│ Vit C    │ │ Vit A    │
+│ ██░░ 45% │ │ ████ 90% │
+│ 40/90 mg │ │ 7.2/8 mg │
+└──────────┘ └──────────┘
+
+MINERALS (uppercase label)
+┌──────────┐ ┌──────────┐
+│ Iron     │ │ Calcium  │
+│ ██░░ 45% │ │ ████ 90% │
+│ 40/90 mg │ │ 7.2/8 mg │
+└──────────┘ └──────────┘
+
+FATS & FIBER (uppercase label)
+┌──────────┐ ┌──────────┐
+│ Omega 3  │ │ Omega 6  │
 │ ██░░ 45% │ │ ████ 90% │
 │ 40/90 mg │ │ 7.2/8 mg │
 └──────────┘ └──────────┘
@@ -323,7 +340,9 @@ MICRONUTRIENTS (uppercase label)
 
 - All interactive elements: `transition: all .2s` or `transition: color .2s`
 - Progress bar fills: `transition: width .4s ease`
-- Never animate layout shifts (no transform on cards, no height transitions)
+- Layout shifts are generally avoided (no transform on cards), EXCEPT for:
+  - **Tab-panel switching**: Smooth cross-fade or slide.
+  - **"Show full nutrients" expand/collapse**: Smooth animation using max-height/measured-height and opacity, avoiding raw `height: auto` jumps.
 
 ### 7.2 Hover States
 

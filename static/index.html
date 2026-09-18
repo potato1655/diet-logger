@@ -34,10 +34,13 @@
   <!-- Content area -->
   <main>
 
-    <!-- ── LOG TAB ── -->
-    <section id="tab-log" class="tab-content active">
-
+    <!-- ── HOME TAB (NEW) ── -->
+    <section id="tab-home" class="tab-content active">
       <div id="daily-dashboard"></div>
+    </section>
+
+    <!-- ── LOG TAB ── -->
+    <section id="tab-log" class="tab-content">
 
       <!-- Upload area -->
       <div class="upload-area">
@@ -62,10 +65,10 @@
 
       <!-- Meal type -->
       <div class="meal-selector">
-        <button class="meal-btn" data-meal="Breakfast" onclick="selectMeal(this)">Breakfast</button>
-        <button class="meal-btn active" data-meal="Lunch" onclick="selectMeal(this)">Lunch</button>
-        <button class="meal-btn" data-meal="Dinner" onclick="selectMeal(this)">Dinner</button>
-        <button class="meal-btn" data-meal="Snack" onclick="selectMeal(this)">Snack</button>
+        <button class="meal-btn" data-meal="Breakfast" onclick="selectMeal(this)">🌅 Breakfast</button>
+        <button class="meal-btn active" data-meal="Lunch" onclick="selectMeal(this)">🍽️ Lunch</button>
+        <button class="meal-btn" data-meal="Dinner" onclick="selectMeal(this)">🌙 Dinner</button>
+        <button class="meal-btn" data-meal="Snack" onclick="selectMeal(this)">🍎 Snack</button>
       </div>
 
       <!-- Meal time -->
@@ -131,8 +134,12 @@
   </main>
 
   <!-- Navigation -->
-  <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="switchTab('log', this)">
+  <nav class="bottom-nav frosted">
+    <button class="nav-btn active" onclick="switchTab('home', this)">
+      <i data-lucide="home" style="width:24px;height:24px;"></i>
+      <span>Home</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('log', this)">
       <i data-lucide="pen-line" style="width:24px;height:24px;"></i>
       <span>Log</span>
     </button>
@@ -144,7 +151,7 @@
 
 </div>
 
-<script src="/app.js?v=14"></script>
+<script src="/app.js?v=15"></script>
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {

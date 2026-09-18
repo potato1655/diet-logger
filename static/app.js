@@ -109,12 +109,14 @@ function renderDailyDashboard(meals) {
   const microEntries = Object.entries(DAILY_TARGETS.micros).filter(([k]) => (microSums[k] || 0) > 0);
   
   if (microEntries.length > 0) {
-    microHtml = `<div class="dash-section-label">MICRONUTRIENTS</div><div class="dash-micros-grid">`;
+    let groups = { 'VITAMINS': [], 'MINERALS': [], 'FATS & FIBER': [], 'OTHER': [] };
+    
     for (const [key, info] of microEntries) {
       const current = Math.round((microSums[key] || 0) * 10) / 10;
       const pct = Math.min(Math.round((current / info.target) * 100), 100);
       const colorClass = pct >= 100 ? 'complete' : pct >= 50 ? 'partial' : 'low';
-      microHtml += `
+      
+      const itemHtml = `
         <div class="dash-micro-item">
           <div class="dash-micro-top">
             <span class="dash-micro-label">${info.label}</span>
@@ -125,8 +127,21 @@ function renderDailyDashboard(meals) {
           </div>
           <div class="dash-micro-val">${current} / ${info.target} ${info.unit}</div>
         </div>`;
+        
+      if (key.startsWith('vitamin_')) groups['VITAMINS'].push(itemHtml);
+      else if (['calcium_mg', 'iron_mg', 'potassium_mg', 'sodium_mg', 'zinc_mg', 'magnesium_mg'].includes(key)) groups['MINERALS'].push(itemHtml);
+      else if (key.includes('fat') || key.includes('fiber') || key.includes('omega') || key.includes('cholesterol')) groups['FATS & FIBER'].push(itemHtml);
+      else groups['OTHER'].push(itemHtml);
     }
-    microHtml += `</div>`;
+    
+    for (const [groupName, items] of Object.entries(groups)) {
+      if (items.length > 0) {
+        microHtml += `
+          <div class="dash-section-label">${groupName}</div>
+          <div class="dash-micros-grid">${items.join('')}</div>
+        `;
+      }
+    }
   }
   
   container.innerHTML = `
@@ -184,11 +199,34 @@ async function signOut() {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
 function switchTab(name, btn) {
-  document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
+  const currentTab = document.querySelector('.tab-content.active');
+  const newTab = document.getElementById('tab-' + name);
+  
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if (name === 'history') loadHistory();
+  
+  if (currentTab === newTab) return;
+  
+  if (currentTab) {
+    currentTab.style.opacity = '0';
+    currentTab.style.transform = 'translateY(10px)';
+    setTimeout(() => {
+      currentTab.classList.remove('active');
+      newTab.classList.add('active');
+      // Force reflow
+      void newTab.offsetWidth;
+      newTab.style.opacity = '1';
+      newTab.style.transform = 'translateY(0)';
+      if (name === 'history') loadHistory();
+      if (name === 'home') loadHistory(); // we need history for dashboard
+    }, 150); // match half transition time
+  } else {
+    newTab.classList.add('active');
+    void newTab.offsetWidth;
+    newTab.style.opacity = '1';
+    newTab.style.transform = 'translateY(0)';
+    if (name === 'history' || name === 'home') loadHistory();
+  }
 }
 
 // ── Image handling ────────────────────────────────────────────────────────
@@ -572,16 +610,12 @@ async function loadHistory() {
       
       let nutrientsHtml = '';
       if (Object.keys(mealMicros).length > 0) {
-        let items = '';
+        let groups = { 'VITAMINS': [], 'MINERALS': [], 'FATS & FIBER': [], 'OTHER': [] };
         for (const [key, value] of Object.entries(mealMicros)) {
           if (value > 0) {
-            // Round to 1 decimal place to fix float precision errors
             const roundedVal = Math.round(value * 10) / 10;
-            
-            // Clean up label (e.g. "vitamin_b6_mg" -> "Vitamin B6")
             let label = key.replace(/_[a-z]+$/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             
-            // Check if we have a target to show a visual pill
             let targetInfo = DAILY_TARGETS.micros[key];
             let pillHtml = '';
             if (targetInfo) {
@@ -590,14 +624,25 @@ async function loadHistory() {
               pillHtml = `<span class="dash-micro-pct ${colorClass}" style="margin-left:6px; font-size:0.65rem;">${pct}%</span>`;
             }
             
-            items += `<div class="nutrient-item">
+            const itemHtml = `<div class="nutrient-item">
               <span class="nutrient-label">${label}</span>
               <span class="nutrient-value">${roundedVal}${pillHtml}</span>
             </div>`;
+            
+            if (key.startsWith('vitamin_')) groups['VITAMINS'].push(itemHtml);
+            else if (['calcium_mg', 'iron_mg', 'potassium_mg', 'sodium_mg', 'zinc_mg', 'magnesium_mg'].includes(key)) groups['MINERALS'].push(itemHtml);
+            else if (key.includes('fat') || key.includes('fiber') || key.includes('omega') || key.includes('cholesterol')) groups['FATS & FIBER'].push(itemHtml);
+            else groups['OTHER'].push(itemHtml);
           }
         }
-        if (items) {
-          nutrientsHtml = `<div class="nutrients-grid">${items}</div>`;
+        
+        for (const [groupName, items] of Object.entries(groups)) {
+          if (items.length > 0) {
+            nutrientsHtml += `
+              <div class="dash-section-label" style="margin-top:.75rem;">${groupName}</div>
+              <div class="nutrients-grid">${items.join('')}</div>
+            `;
+          }
         }
       }
       
@@ -624,7 +669,9 @@ async function loadHistory() {
           ${nutrientsHtml ? `
           <details class="nutrients-dropdown">
             <summary>Show full nutrients</summary>
-            ${nutrientsHtml}
+            <div class="nutrients-dropdown-content">
+              ${nutrientsHtml}
+            </div>
           </details>` : ''}
         </div>
       </div>`;
