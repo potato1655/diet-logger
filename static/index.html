@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#141414" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1c1a19" />
   <title>Diet Logger</title>
   <link rel="manifest" href="/manifest.json" />
   <link rel="stylesheet" href="/style.css" />
@@ -15,10 +15,13 @@
 <!-- Auth overlay -->
 <div id="auth-overlay" class="hidden">
   <div class="auth-card">
-    <div class="auth-icon"><i data-lucide="salad" style="width:64px;height:64px;"></i></div>
+    <div class="auth-icon"><i data-lucide="salad" style="width:64px;height:64px;color:var(--accent)"></i></div>
     <h1>Diet Logger</h1>
-    <p>Sign in with Google to log your meals to Google Health</p>
-    <button class="btn-google" onclick="signIn()">Sign in with Google</button>
+    <p>Snap a photo, get instant nutrition data, and log it straight to Google Health.</p>
+    <button class="btn-google" onclick="signIn()">
+      <i data-lucide="log-in" style="width:18px;height:18px;"></i>
+      Sign in with Google
+    </button>
   </div>
 </div>
 
@@ -26,8 +29,13 @@
 <div id="app" class="hidden">
   <!-- Header -->
   <header>
-    <span class="logo" style="display:flex;align-items:center;gap:6px;"><i data-lucide="salad" style="width:20px;height:20px;color:var(--accent)"></i> Diet Logger</span>
-    <button class="btn-logout" onclick="signOut()" title="Sign out"><i data-lucide="log-out" style="width:16px;height:16px;"></i></button>
+    <span class="logo" style="display:flex;align-items:center;gap:8px;">
+      <i data-lucide="salad" style="width:20px;height:20px;color:var(--accent)"></i>
+      Diet Logger
+    </span>
+    <button class="btn-logout" onclick="signOut()" title="Sign out">
+      <i data-lucide="log-out" style="width:16px;height:16px;"></i>
+    </button>
   </header>
 
   <!-- Content area -->
@@ -37,14 +45,19 @@
     <section id="tab-log" class="tab-content active">
 
       <!-- Upload area -->
-      <div class="upload-area">
+      <div class="upload-area" id="upload-area">
         <div id="preview-container">
           <div class="upload-placeholder">
-            <span class="upload-icon"><i data-lucide="image-plus" style="width:40px;height:40px;color:var(--accent)"></i></span>
-            <p>Add a food photo</p>
+            <span class="upload-icon"><i data-lucide="camera" style="width:40px;height:40px;color:var(--accent)"></i></span>
+            <p style="font-weight:600;margin-bottom:4px;">Snap your meal</p>
+            <p style="font-size:0.82rem;color:var(--text-dim);">Take a photo or choose from gallery</p>
             <div class="upload-buttons">
-              <button type="button" class="btn-secondary" style="display:flex;align-items:center;gap:4px;" onclick="event.stopPropagation(); document.getElementById('camera-input').click()"><i data-lucide="camera" style="width:14px;height:14px;"></i> Camera</button>
-              <button type="button" class="btn-secondary" style="display:flex;align-items:center;gap:4px;" onclick="event.stopPropagation(); document.getElementById('gallery-input').click()"><i data-lucide="image" style="width:14px;height:14px;"></i> Gallery</button>
+              <button type="button" class="btn-secondary" style="display:flex;align-items:center;gap:5px;" onclick="event.stopPropagation(); document.getElementById('camera-input').click()">
+                <i data-lucide="camera" style="width:14px;height:14px;"></i> Camera
+              </button>
+              <button type="button" class="btn-secondary" style="display:flex;align-items:center;gap:5px;" onclick="event.stopPropagation(); document.getElementById('gallery-input').click()">
+                <i data-lucide="image" style="width:14px;height:14px;"></i> Gallery
+              </button>
             </div>
           </div>
         </div>
@@ -54,12 +67,12 @@
 
       <!-- Context text -->
       <div class="form-group">
-        <input type="text" id="extra-text" placeholder="Anything to add? (e.g. extra ghee, large portion)" />
+        <input type="text" id="extra-text" placeholder="Add context... (e.g. 'extra ghee, large portion')" />
       </div>
 
       <!-- Meal type -->
       <div class="meal-selector">
-        <button class="meal-btn" data-meal="Breakfast" onclick="selectMeal(this)">🌅 Breakfast</button>
+        <button class="meal-btn" data-meal="Breakfast" onclick="selectMeal(this)">☀️ Breakfast</button>
         <button class="meal-btn active" data-meal="Lunch" onclick="selectMeal(this)">🍽️ Lunch</button>
         <button class="meal-btn" data-meal="Dinner" onclick="selectMeal(this)">🌙 Dinner</button>
         <button class="meal-btn" data-meal="Snack" onclick="selectMeal(this)">🍎 Snack</button>
@@ -67,14 +80,17 @@
 
       <!-- Meal time -->
       <div class="form-group time-group">
-        <label for="meal-time">Meal Time</label>
+        <label for="meal-time">
+          <i data-lucide="clock" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;color:var(--text-dim)"></i>
+          Time
+        </label>
         <input type="time" id="meal-time">
       </div>
 
       <!-- Analyze button -->
       <button id="analyze-btn" class="btn-analyze hidden" style="display:none" onclick="analyzeFood()">
-        <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-          <i data-lucide="sparkles" style="width:16px;height:16px;"></i> Analyze Food
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+          <i data-lucide="sparkles" style="width:18px;height:18px;"></i> Analyze Food
         </div>
       </button>
 
@@ -82,11 +98,18 @@
       <div id="spinner" class="hidden">
         <div class="spinner"></div>
         <p>Analyzing your food...</p>
+        <div style="margin-top:1rem;">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card" style="width:85%;"></div>
+          <div class="skeleton-card" style="width:70%;"></div>
+        </div>
       </div>
 
       <!-- AI Questions -->
       <div id="ai-questions-container" class="hidden ai-questions-card">
-        <h3 style="display:flex;align-items:center;gap:6px;"><i data-lucide="message-square-text" style="width:18px;height:18px;color:var(--accent);"></i> Questions</h3>
+        <h3 style="display:flex;align-items:center;gap:6px;">
+          <i data-lucide="message-square-text" style="width:18px;height:18px;color:var(--accent);"></i> Quick Questions
+        </h3>
         <ul id="ai-questions-list"></ul>
       </div>
 
@@ -94,33 +117,35 @@
       <div id="food-results" class="hidden">
         <div class="section-header">
           <h2>Detected Foods</h2>
-          <button class="btn-add" onclick="addFoodManually()">+ Add</button>
+          <button class="btn-add" onclick="addFoodManually()">
+            <span style="display:flex;align-items:center;gap:4px;"><i data-lucide="plus" style="width:12px;height:12px;"></i> Add</span>
+          </button>
         </div>
-        <div id="food-list"></div>
+        <div id="food-list" class="stagger"></div>
         <div class="totals-card" id="totals-card"></div>
-        <button id="log-btn" class="btn-log" onclick="logFood(this)">
-          <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-            <i data-lucide="check" style="width:18px;height:18px;"></i> Log Meal
+        <button id="log-btn" class="btn-log" onclick="logMeal(this)">
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i data-lucide="send" style="width:18px;height:18px;"></i> Log to Google Health
           </div>
         </button>
       </div>
 
       <!-- Success message -->
       <div id="success-msg" class="success-msg hidden">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <i data-lucide="check-circle-2" style="width:20px;height:20px;"></i>
+        <div class="success-icon" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:1.1rem;">
+          <i data-lucide="check-circle-2" style="width:24px;height:24px;"></i>
           <span></span>
         </div>
-        <button class="btn-secondary" onclick="resetLog()">Log Another</button>
+        <button onclick="resetLog()">Log Another Meal</button>
       </div>
 
     </section>
 
     <!-- ── HISTORY TAB ── -->
     <section id="tab-history" class="tab-content">
-      <div class="history-header">
-        <h2>Recent Meals</h2>
-        <p class="text-muted">Last 7 days</p>
+      <div style="margin-bottom:1rem;">
+        <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.02em;">Recent Meals</h2>
+        <p style="color:var(--text-dim);font-size:0.82rem;margin-top:2px;">Pulled from Google Fit · Last 7 days</p>
       </div>
       <div id="history-list"></div>
     </section>
@@ -145,7 +170,7 @@
 
 </div>
 
-<script src="/app.js?v=25"></script>
+<script src="/app.js?v=26"></script>
 <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
@@ -153,7 +178,6 @@
           const newWorker = reg.installing;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New update available, force reload
               window.location.reload();
             }
           });
@@ -170,15 +194,6 @@
     lucide.createIcons();
   </script>
   <!-- Toast Container -->
-  <div id="toast-container" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:9999;width:90%;max-width:400px;pointer-events:none;"></div>
-  
-  <!-- Generic Modal (used for Micros and Macro history) -->
-  <div id="generic-modal" style="display: none; position: fixed; inset: 0; background: var(--bg); z-index: 1000; overflow-y: auto; padding: 0; padding-bottom: 100px;">
-    <div style="display: flex; align-items: center; gap: 1rem; position: sticky; top: 0; background: rgba(28, 26, 25, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 1.2rem 1rem; z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.05);">
-      <button onclick="closeModal()" style="background: rgba(255,255,255,0.08); border: none; border-radius: 999px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--text); cursor: pointer;"><i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i></button>
-      <h2 id="generic-modal-title" style="font-size: 1.2rem; font-weight: 600;"></h2>
-    </div>
-    <div id="generic-modal-content" style="padding: 1rem;"></div>
-  </div>
+  <div id="toast-container" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:9999;width:90%;max-width:400px;pointer-events:none;"></div>
 </body>
 </html>
