@@ -363,13 +363,17 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
             return jsonify({'success': False, 'error': f"Failed to get app data source: {e}"}), 500
             
         for f in foods_to_delete:
+            target_ds_id = f.get('_delete_ds')
+            if not target_ds_id:
+                target_ds_id = ds_id
+                
             dset = f.get('_delete_dataset')
             
             if dset:
                 start_ns = dset.split('-')[0]
                 surgical_dset = f"{start_ns}-{int(start_ns) + 1}"
                 
-                url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{surgical_dset}'
+                url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{target_ds_id}/datasets/{surgical_dset}'
                 r = http_requests.delete(url, headers=headers)
                 if r.status_code not in (200, 204):
                     errors.append(f"Could not delete: {r.text}")
