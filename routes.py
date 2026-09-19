@@ -436,27 +436,3 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
                     
         return jsonify({'success': True})
 
-    @app.route('/nuke18', methods=['GET', 'POST'])
-    def nuke18():
-        creds = load_credentials()
-        if not creds or not creds.valid:
-            return jsonify({'error': 'Unauthorized'}), 401
-            
-        headers = {'Authorization': f'Bearer {creds.token}'}
-        try:
-            ds_id = ensure_data_source(headers)
-        except Exception as e:
-            return f"FAILED to get data source: {e}"
-        
-        # 18th of Sept in nanoseconds (UTC)
-        start_ns = int(datetime(2026, 9, 18, 0, 0, tzinfo=timezone.utc).timestamp() * 1e9)
-        end_ns = int(datetime(2026, 9, 19, 0, 0, tzinfo=timezone.utc).timestamp() * 1e9)
-        
-        dset = f"{start_ns}-{end_ns}"
-        url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{dset}'
-        r = http_requests.delete(url, headers=headers)
-        
-        if r.status_code in (200, 204):
-            return "SUCCESS! Nuked all meals on the 18th from Google Fit! Go back and refresh."
-        else:
-            return f"FAILED to nuke: {r.status_code} {r.text}"
