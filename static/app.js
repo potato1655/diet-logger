@@ -18,6 +18,8 @@ window.addEventListener('load', async () => {
   }
 
   const now = new Date();
+  const dateStr = now.getFullYear() + '-' + (now.getMonth() + 1).toString().padStart(2, '0') + '-' + now.getDate().toString().padStart(2, '0');
+  document.getElementById('meal-date').value = dateStr;
   const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
   document.getElementById('meal-time').value = timeStr;
 });
@@ -364,12 +366,24 @@ async function logMeal() {
   const dateVal = document.getElementById('meal-date').value;
 
   let timestamp = null;
-  if (timeVal && dateVal) {
-    const [h, m] = timeVal.split(':');
-    const [year, month, day] = dateVal.split('-');
-    const d = new Date();
-    d.setFullYear(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
-    d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+  const nowForLog = new Date();
+  if (dateVal || timeVal) {
+    const d = new Date(nowForLog.getTime());
+    if (dateVal) {
+      const [year, month, day] = dateVal.split('-');
+      d.setFullYear(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+    }
+    if (timeVal) {
+      const [h, m] = timeVal.split(':');
+      d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+    }
+    
+    // If the selected datetime is in the future (e.g. they typed 20:00 but it's 12:00 now),
+    // and they left the date as today (or didn't set it), they almost certainly meant yesterday.
+    if (d.getTime() > nowForLog.getTime()) {
+      d.setDate(d.getDate() - 1);
+    }
+    
     timestamp = d.getTime();
   } else if (timeVal) {
     const [h, m] = timeVal.split(':');
@@ -704,12 +718,16 @@ function autoSelectMealTime() {
   const dateInput = document.getElementById('meal-date');
   if (timeInput && !timeInput.value) {
     const now = new Date();
+  const dateStr = now.getFullYear() + '-' + (now.getMonth() + 1).toString().padStart(2, '0') + '-' + now.getDate().toString().padStart(2, '0');
+  document.getElementById('meal-date').value = dateStr;
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     timeInput.value = `${hh}:${mm}`;
   }
   if (dateInput && !dateInput.value) {
     const now = new Date();
+  const dateStr = now.getFullYear() + '-' + (now.getMonth() + 1).toString().padStart(2, '0') + '-' + now.getDate().toString().padStart(2, '0');
+  document.getElementById('meal-date').value = dateStr;
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
