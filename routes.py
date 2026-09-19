@@ -427,6 +427,10 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
         if names_to_delete:
             url = 'https://health.googleapis.com/v4/users/me/dataTypes/nutrition-log/dataPoints:batchDelete'
             r = http_requests.post(url, headers=headers, json={"names": names_to_delete})
+            
+            if r.status_code == 401 or r.status_code == 403:
+                return jsonify({'success': False, 'error': 'REAUTH_REQUIRED'}), 401
+                
             if r.status_code not in (200, 204):
                 return jsonify({'success': False, 'error': f"Could not delete: {r.text}"}), 500
                     

@@ -427,6 +427,10 @@ async function logMeal() {
       spawnConfetti();
       showToast('Meal logged! 🎉');
     } else {
+      if (res.status === 401 || data.error === 'REAUTH_REQUIRED') {
+          window.location.href = '/oauth/login';
+          return;
+      }
       showToast('Error: ' + (data.error || 'Unknown error'), true);
     }
   } catch (e) {
@@ -653,7 +657,15 @@ async function deleteEntry(id) {
             }, 300);
             showToast('Meal deleted from Google Fit');
         } else {
+            if (res.status === 401) {
+                window.location.href = '/oauth/login';
+                return;
+            }
             const data = await res.json();
+            if (data.error === 'REAUTH_REQUIRED') {
+                window.location.href = '/oauth/login';
+                return;
+            }
             showToast('Failed: ' + data.error, true);
             if (el) { el.style.opacity = '1'; }
             if (btn) { btn.innerHTML = originalIcon; btn.disabled = false; }
