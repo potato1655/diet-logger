@@ -26,7 +26,7 @@ def validate_json_dict(data):
     return True
 
 from auth import load_credentials
-from fit import log_to_google_fit, ensure_data_source, ns_now
+from fit import log_to_google_health
 from gemini_client import call_gemini_with_retry
 from groq_client import call_groq_summary
 
@@ -273,7 +273,7 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
 
         time_str = data.get('time')
         timestamp = data.get('timestamp')
-        health_ok, health_msg, fit_dataset_ids = log_to_google_fit(foods, meal_type, time_str, timestamp)
+        health_ok, health_msg, fit_dataset_ids = log_to_google_health(foods, meal_type, time_str, timestamp)
         
         base_time = datetime.now(timezone.utc)
         if timestamp:
@@ -301,11 +301,16 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
             'fit_dataset_ids': fit_dataset_ids,
         }
 
+        if not health_ok:
+            return jsonify({
+                'success': False,
+                'error': health_msg
+            }), 500
+
         return jsonify({
-            'success':      True,
-            'health_logged': health_ok,
-            'health_message': health_msg,
-            'entry':        entry,
+            'success': True,
+            'health_logged': True,
+            'entry': entry,
         })
 
     @app.route('/history')
@@ -315,52 +320,53 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
             return jsonify([])
         
         headers = {'Authorization': f'Bearer {creds.token}'}
-        
-        end_ns = ns_now()
-        start_ns = end_ns - int(7 * 24 * 60 * 60 * 1000000000)
-        
-        merged_ds = "derived:com.google.nutrition:com.google.android.gms:merged"
-        url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{merged_ds}/datasets/{start_ns}-{end_ns}'
+        url = 'https://health.googleapis.com/v4/users/me/dataTypes/nutrition-log/dataPoints'
         
         r = http_requests.get(url, headers=headers)
-        if r.status_code != 200:
-            current_app.logger.error(f"Error fetching history from Google Fit: {r.status_code} - {r.text}")
+        if r.status_code == 403 or r.status_code == 401:
             return jsonify([])
             
-        points = r.json().get('point', [])
+        if r.status_code != 200:
+            current_app.logger.error(f"Error fetching history from Google Health: {r.status_code} - {r.text}")
+            return jsonify([])
+            
+        points = r.json().get('dataPoints', [])
         meals = []
         
         for p in points:
-            p_start = int(p.get('startTimeNanos', 0))
-            p_end = int(p.get('endTimeNanos', 0))
+            log = p.get('nutritionLog', {})
+            interval = log.get('interval', {})
+            start_str = interval.get('startTime')
+            if not start_str: continue
             
-            vals = p.get('value', [])
-            if len(vals) < 3:
+            try:
+                # startTime is ISO 8601 like 2026-09-18T20:00:00Z
+                dt = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                p_start = int(dt.timestamp() * 1e9)
+            except Exception:
                 continue
                 
-            nutrients = vals[0].get('mapVal', [])
-            meal_type_int = vals[1].get('intVal', 2)
-            food_name = vals[2].get('stringVal', 'Unknown Food')
-            
-            rev_meal_map = {1: 'Breakfast', 2: 'Lunch', 3: 'Dinner', 4: 'Snack', 5: 'Other'}
-            meal_type_str = rev_meal_map.get(meal_type_int, 'Other')
+            food_name = log.get('foodDisplayName', 'Unknown Food')
+            meal_type_str = log.get('mealType', 'SNACK')
+            # Normalize meal type for frontend ('BREAKFAST' -> 'Breakfast')
+            meal_type_str = meal_type_str.capitalize()
             
             food_obj = {'name': food_name}
+            food_obj['calories'] = log.get('energy', {}).get('kcal', 0)
+            food_obj['carbs_g'] = log.get('totalCarbohydrate', {}).get('grams', 0)
+            food_obj['fat_g'] = log.get('totalFat', {}).get('grams', 0)
+            
+            nutrients = log.get('nutrients', [])
             for n in nutrients:
-                k = n.get('key')
-                v = n.get('value', {}).get('fpVal', 0)
-                if k == 'calories': food_obj['calories'] = v
-                elif k == 'protein': food_obj['protein_g'] = v
-                elif k == 'fat.total': food_obj['fat_g'] = v
-                elif k == 'carbs.total': food_obj['carbs_g'] = v
-                elif k == 'dietary_fiber': food_obj['fiber_g'] = v
+                nut = n.get('nutrient')
+                q = n.get('quantity', {}).get('grams', 0)
+                if nut == 'PROTEIN': food_obj['protein_g'] = q
+                elif nut == 'DIETARY_FIBER': food_obj['fiber_g'] = q
                 else:
-                    if 'micros' not in food_obj:
-                        food_obj['micros'] = {}
-                    food_obj['micros'][k] = v
-                
-            food_obj['_delete_ds'] = p.get('originDataSourceId')
-            food_obj['_delete_dataset'] = f"{p_start}-{p_end}"
+                    if 'micros' not in food_obj: food_obj['micros'] = {}
+                    food_obj['micros'][nut] = q
+            
+            food_obj['_delete_dataset'] = p.get('name')
             
             matched_meal = None
             for m in meals:
@@ -409,33 +415,21 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
         if not creds or not creds.valid:
             return jsonify({'success': False, 'error': 'Not authenticated'}), 401
             
-        headers = {'Authorization': f'Bearer {creds.token}'}
+        headers = {'Authorization': f'Bearer {creds.token}', 'Content-Type': 'application/json'}
         errors = []
         
-        try:
-            ds_id = ensure_data_source(headers)
-        except Exception as e:
-            return jsonify({'success': False, 'error': 'Failed to get app data source.'}), 500
-            
+        names_to_delete = []
         for f in foods_to_delete:
-            target_ds_id = f.get('_delete_ds')
-            if not target_ds_id:
-                target_ds_id = ds_id
+            name = f.get('_delete_dataset')
+            if name:
+                names_to_delete.append(name)
                 
-            dset = f.get('_delete_dataset')
-            
-            if dset:
-                start_ns = dset.split('-')[0]
-                surgical_dset = f"{start_ns}-{int(start_ns) + 1}"
-                
-                url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{target_ds_id}/datasets/{surgical_dset}'
-                r = http_requests.delete(url, headers=headers)
-                if r.status_code not in (200, 204):
-                    errors.append(f"Could not delete: {r.text}")
+        if names_to_delete:
+            url = 'https://health.googleapis.com/v4/users/me/dataTypes/nutrition-log/dataPoints:batchDelete'
+            r = http_requests.post(url, headers=headers, json={"names": names_to_delete})
+            if r.status_code not in (200, 204):
+                return jsonify({'success': False, 'error': f"Could not delete: {r.text}"}), 500
                     
-        if errors:
-            return jsonify({'success': False, 'error': '; '.join(errors)}), 500
-            
         return jsonify({'success': True})
 
     @app.route('/nuke18', methods=['GET', 'POST'])

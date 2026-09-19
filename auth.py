@@ -6,8 +6,8 @@ from google_auth_oauthlib.flow import Flow
 from config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI
 
 SCOPES = [
-    'https://www.googleapis.com/auth/fitness.nutrition.write',
-    'https://www.googleapis.com/auth/fitness.nutrition.read',
+    'https://www.googleapis.com/auth/googlehealth.nutrition.writeonly',
+    'https://www.googleapis.com/auth/googlehealth.nutrition.readonly',
     'openid',
     'email',
 ]

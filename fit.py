@@ -2,50 +2,7 @@ import requests as http_requests
 from datetime import datetime, timezone, timedelta
 from auth import load_credentials
 
-MEAL_TYPE_MAP = {'Breakfast': 1, 'Lunch': 2, 'Dinner': 3, 'Snack': 4, 'Other': 5}
-
-def ns_now():
-    return int(datetime.now(timezone.utc).timestamp() * 1e9)
-
-def ensure_data_source(headers):
-    ds_resp = http_requests.get('https://www.googleapis.com/fitness/v1/users/me/dataSources', headers=headers)
-    if ds_resp.status_code == 200:
-        for d in ds_resp.json().get('dataSource', []):
-            if 'diet_logger' in d.get('dataStreamId', ''):
-                return d.get('dataStreamId')
-
-    ds_id = 'raw:com.google.nutrition:diet_logger'
-    body = {
-        'dataStreamName': 'diet_logger',
-        'type': 'raw',
-        'application': {'name': 'Diet Logger', 'version': '1'},
-        'dataType': {
-            'name': 'com.google.nutrition',
-            'field': [
-                {'name': 'nutrients', 'format': 'map'},
-                {'name': 'meal_type', 'format': 'integer'},
-                {'name': 'food_item', 'format': 'string'},
-            ],
-        },
-    }
-    r = http_requests.post(
-        'https://www.googleapis.com/fitness/v1/users/me/dataSources',
-        headers=headers,
-        json=body,
-    )
-    if r.status_code in (200, 201):
-        return r.json().get('dataStreamId', ds_id)
-    
-    if r.status_code == 409:
-        err_msg = r.json().get('error', {}).get('message', '')
-        if 'already exists' in err_msg:
-            parts = err_msg.split('Data Source: ')
-            if len(parts) > 1:
-                return parts[1].split(' already exists')[0].strip()
-            
-    raise RuntimeError(f'Could not create data source: {r.text}')
-
-def log_to_google_fit(foods, meal_type, time_str=None, timestamp=None):
+def log_to_google_health(foods, meal_type, time_str=None, timestamp=None):
     creds = load_credentials()
     if not creds:
         return False, 'Not authenticated: credentials missing.', []
@@ -59,15 +16,15 @@ def log_to_google_fit(foods, meal_type, time_str=None, timestamp=None):
         'Content-Type': 'application/json',
     }
 
-    try:
-        ds_id = ensure_data_source(headers)
-    except RuntimeError as e:
-        return False, str(e), []
+    meal_type_upper = meal_type.upper()
+    if meal_type_upper not in ('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'):
+        meal_type_upper = 'SNACK'
 
-    meal_int = MEAL_TYPE_MAP.get(meal_type, 2)
     errors = []
     dataset_ids = []
     
+    # We MUST use the explicit UTC timestamp per constraints.
+    # If the frontend didn't pass timestamp but passed time_str, we fallback to today.
     base_time = datetime.now(timezone.utc)
     if timestamp:
         base_time = datetime.fromtimestamp(timestamp / 1000.0, timezone.utc)
@@ -84,47 +41,41 @@ def log_to_google_fit(foods, meal_type, time_str=None, timestamp=None):
         end_time = base_time + timedelta(milliseconds=i)
         start_time = end_time - timedelta(minutes=15)
         
-        end_ns = int(end_time.timestamp() * 1e9)
-        start_ns = int(start_time.timestamp() * 1e9)
-
-        point = {
-            'dataTypeName': 'com.google.nutrition',
-            'startTimeNanos': str(start_ns),
-            'endTimeNanos': str(end_ns),
-            'value': [
-                {
-                    'mapVal': [
-                        {'key': 'calories',        'value': {'fpVal': float(food.get('calories', 0))}},
-                        {'key': 'protein',         'value': {'fpVal': float(food.get('protein_g', 0))}},
-                        {'key': 'fat.total',       'value': {'fpVal': float(food.get('fat_g', 0))}},
-                        {'key': 'carbs.total',     'value': {'fpVal': float(food.get('carbs_g', 0))}},
-                        {'key': 'dietary_fiber',   'value': {'fpVal': float(food.get('fiber_g', 0))}},
-                    ]
-                },
-                {'intVal': meal_int},
-                {'stringVal': food.get('name', 'Unknown')},
-            ],
-        }
-        
-        micros = food.get('micros', {})
-        for k, v in micros.items():
-            if float(v) > 0:
-                point['value'][0]['mapVal'].append({'key': k, 'value': {'fpVal': float(v)}})
-                
-        dataset_id = f'{start_ns}-{end_ns}'
-        dataset_ids.append(dataset_id)
-        
-        url = f'https://www.googleapis.com/fitness/v1/users/me/dataSources/{ds_id}/datasets/{dataset_id}'
+        # Build nutrition log payload
         body = {
-            'dataSourceId': ds_id,
-            'minStartTimeNs': str(start_ns),
-            'maxEndTimeNs': str(end_ns),
-            'point': [point],
+            "nutritionLog": {
+                "interval": {
+                    "startTime": start_time.isoformat(),
+                    "endTime": end_time.isoformat()
+                },
+                "foodDisplayName": food.get('name', 'Unknown'),
+                "mealType": meal_type_upper,
+                "energy": { "kcal": float(food.get('calories', 0)) },
+                "totalCarbohydrate": { "grams": float(food.get('carbs_g', 0)) },
+                "totalFat": { "grams": float(food.get('fat_g', 0)) },
+                "nutrients": [
+                    { "nutrient": "PROTEIN", "quantity": { "grams": float(food.get('protein_g', 0)) } },
+                    { "nutrient": "DIETARY_FIBER", "quantity": { "grams": float(food.get('fiber_g', 0)) } }
+                ],
+                "serving": { "amount": 1.0 }
+            }
         }
-        r = http_requests.patch(url, headers=headers, json=body)
+        
+        url = 'https://health.googleapis.com/v4/users/me/dataTypes/nutrition-log/dataPoints'
+        r = http_requests.post(url, headers=headers, json=body)
+        
+        if r.status_code == 403 or r.status_code == 401:
+            return False, 'REAUTH_REQUIRED', []
+            
         if r.status_code not in (200, 201):
-            errors.append(f"{food.get('name')}: {r.text}")
+            errors.append(f"{food.get('name')}: {r.status_code} {r.text}")
+        else:
+            # The API returns the created data point which includes its full 'name' (the resource name)
+            # e.g., 'users/me/dataTypes/nutrition-log/dataPoints/12345'
+            created_point = r.json()
+            resource_name = created_point.get('name', '')
+            dataset_ids.append(resource_name)
 
     if errors:
-        return False, '; '.join(errors), []
+        return False, '; '.join(errors), dataset_ids
     return True, 'Logged to Google Health successfully', dataset_ids

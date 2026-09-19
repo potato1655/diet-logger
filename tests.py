@@ -31,7 +31,7 @@ def test_log_meal_foods_not_list(client):
 from unittest.mock import patch
 
 def test_log_meal_bad_numeric_values(client):
-    with patch('routes.log_to_google_fit', return_value=(True, 'OK', ['ds-1'])):
+    with patch('routes.log_to_google_health', return_value=(True, 'OK', ['ds-1'])):
         payload = {
             'foods': [
                 {'name': 'Apple', 'calories': 'N/A', 'protein_g': None, 'carbs_g': '10.5', 'fat_g': float('inf')},
@@ -62,8 +62,9 @@ def test_csrf_protection(client):
     assert rv.status_code == 403
     
     # With correct token
-    rv = client.post('/log', json={'foods': []}, headers={'X-CSRFToken': 'test-token'})
-    assert rv.status_code == 200
+    with patch('routes.log_to_google_health', return_value=(True, 'OK', ['ds-1'])):
+        rv = client.post('/log', json={'foods': []}, headers={'X-CSRFToken': 'test-token'})
+        assert rv.status_code == 200
 
 def test_get_endpoints_work_without_csrf(client):
     rv = client.get('/auth/status')
