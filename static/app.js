@@ -143,7 +143,7 @@ async function analyzeFood() {
   try {
     const res  = await fetch('/analyze', {
       method: 'POST',
-      headers: { \'X-CSRFToken\': csrfToken, 'Content-Type': 'application/json' },
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: currentImageB64, text: extraText }),
     });
     let data;
@@ -283,7 +283,7 @@ async function refineFood(idx) {
   try {
     const res = await fetch('/refine', {
       method: 'POST',
-      headers: { \'X-CSRFToken\': csrfToken, 'Content-Type': 'application/json' },
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ food: currentFood, text: text }),
     });
     const data = await res.json();
@@ -381,7 +381,7 @@ async function logMeal() {
   try {
     const res  = await fetch('/log', {
       method: 'POST',
-      headers: { \'X-CSRFToken\': csrfToken, 'Content-Type': 'application/json' },
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({
           foods: currentFoods,
           meal_type: selectedMeal,
@@ -623,7 +623,7 @@ async function deleteEntry(id) {
     try {
         const res = await fetch('/log/delete', {
             method: 'POST',
-            headers: { \'X-CSRFToken\': csrfToken, 'Content-Type': 'application/json' },
+            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
             body: JSON.stringify({ foods: entry.foods })
         });
 
