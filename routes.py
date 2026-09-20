@@ -3,7 +3,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 from flask import request, jsonify, send_from_directory, current_app
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import requests as http_requests
 
 
@@ -322,15 +322,35 @@ Give me a high-level summary of my eating habits. Highlight what I am doing well
         headers = {'Authorization': f'Bearer {creds.token}'}
         url = 'https://health.googleapis.com/v4/users/me/dataTypes/nutrition-log/dataPoints'
         
-        r = http_requests.get(url, headers=headers)
-        if r.status_code == 403 or r.status_code == 401:
-            return jsonify([])
+        end_dt = datetime.now(timezone.utc)
+        start_dt = end_dt - timedelta(days=7)
+        start_str = start_dt.isoformat()
+        end_str = end_dt.isoformat()
+        
+        filter_str = f'nutrition_log.interval.start_time >= "{start_str}" AND nutrition_log.interval.start_time < "{end_str}"'
+        page_token = None
+        
+        points = []
+        while True:
+            params = {'filter': filter_str}
+            if page_token:
+                params['pageToken'] = page_token
+                
+            r = http_requests.get(url, headers=headers, params=params)
+            if r.status_code == 403 or r.status_code == 401:
+                return jsonify([])
+                
+            if r.status_code != 200:
+                current_app.logger.error(f"Error fetching history from Google Health: {r.status_code} - {r.text}")
+                return jsonify([])
+                
+            data = r.json()
+            points.extend(data.get('dataPoints', []))
             
-        if r.status_code != 200:
-            current_app.logger.error(f"Error fetching history from Google Health: {r.status_code} - {r.text}")
-            return jsonify([])
-            
-        points = r.json().get('dataPoints', [])
+            next_token = data.get('nextPageToken')
+            if not next_token:
+                break
+            page_token = next_token
         meals = []
         
         for p in points:

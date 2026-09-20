@@ -114,3 +114,122 @@ def test_oauth_missing_state(client):
 def test_oauth_logout_clears_session(client):
     rv = client.post('/oauth/logout', headers={'X-CSRFToken': 'test-token'})
     assert rv.status_code == 200
+
+import pytest
+from unittest.mock import patch, MagicMock
+from server import app
+import json
+import os
+from datetime import datetime, timezone
+
+def test_history_filter_and_pagination(client):
+    # Mock creds
+    class MockCreds:
+        valid = True
+        token = 'fake_token'
+        
+    with patch('routes.load_credentials', return_value=MockCreds()):
+        with patch('routes.http_requests.get') as mock_get:
+            # First page
+            resp1 = MagicMock()
+            resp1.status_code = 200
+            resp1.json.return_value = {
+                'dataPoints': [{'name': 'pt1', 'nutritionLog': {'mealType': 'LUNCH'}}],
+                'nextPageToken': 'token123'
+            }
+            # Second page
+            resp2 = MagicMock()
+            resp2.status_code = 200
+            resp2.json.return_value = {
+                'dataPoints': [{'name': 'pt2', 'nutritionLog': {'mealType': 'SNACK'}}],
+                'nextPageToken': None
+            }
+            
+            mock_get.side_effect = [resp1, resp2]
+            
+            rv = client.get('/history')
+            assert rv.status_code == 200
+            assert mock_get.call_count == 2
+            
+            # Check filter in first call
+            call1_kwargs = mock_get.call_args_list[0][1]
+            assert 'params' in call1_kwargs
+            assert 'filter' in call1_kwargs['params']
+            assert 'nutrition_log.interval.start_time' in call1_kwargs['params']['filter']
+            assert 'pageToken' not in call1_kwargs['params']
+            
+            # Check filter and token in second call
+            call2_kwargs = mock_get.call_args_list[1][1]
+            assert 'filter' in call2_kwargs['params']
+            assert call2_kwargs['params']['pageToken'] == 'token123'
+
+def test_micronutrient_mapping(client):
+    # This tests the payload that log_to_google_health generates
+    from fit import log_to_google_health
+    
+    class MockCreds:
+        valid = True
+        token = 'fake_token'
+        expired = False
+    
+    with patch('fit.load_credentials', return_value=MockCreds()):
+        with patch('fit.http_requests.post') as mock_post:
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {'name': 'resource1'}
+            mock_post.return_value = resp
+            
+            foods = [{
+                'name': 'Test Food',
+                'calories': 100,
+                'protein_g': 10,
+                'carbs_g': 20,
+                'fat_g': 5,
+                'fiber_g': 2,
+                'micros': {
+                    'sodium_mg': 500,        # 0.5 g
+                    'vitamin_c_mg': 60,      # 0.06 g
+                    'vitamin_b12_mcg': 2.4,  # 0.0000024 g
+                    'vitamin_d_iu': 400,     # Should be skipped
+                    'unknown_nutrient': 10   # Should be skipped
+                }
+            }]
+            
+            res, msg, ids = log_to_google_health(foods, 'LUNCH')
+            assert res is True
+            
+            # Verify payload
+            payload = mock_post.call_args[1]['json']
+            nutrients = payload['nutritionLog']['nutrients']
+            
+            # Expected mappings
+            nutrient_dict = {n['nutrient']: n['quantity']['grams'] for n in nutrients}
+            
+            assert nutrient_dict['PROTEIN'] == 10.0
+            assert nutrient_dict['DIETARY_FIBER'] == 2.0
+            assert nutrient_dict['SODIUM'] == 0.5
+            assert nutrient_dict['VITAMIN_C'] == 0.06
+            assert nutrient_dict['VITAMIN_B12'] == 0.0000024
+            assert 'VITAMIN_D' not in nutrient_dict
+            assert 'UNKNOWN_NUTRIENT' not in nutrient_dict
+
+def test_secret_key_production(monkeypatch):
+    # Remove SECRET_KEY and set production
+    monkeypatch.delenv('FLASK_SECRET_KEY', raising=False)
+    monkeypatch.setenv('APP_ENV', 'production')
+    
+    # We must import server in a way that executes the initialization
+    import importlib
+    import server
+    
+    with pytest.raises(ValueError, match="FLASK_SECRET_KEY is required in production environment."):
+        importlib.reload(server)
+
+def test_secret_key_local(monkeypatch):
+    monkeypatch.delenv('FLASK_SECRET_KEY', raising=False)
+    monkeypatch.setenv('APP_ENV', 'development')
+    
+    import importlib
+    import server
+    importlib.reload(server)
+    assert server.app.secret_key is not None

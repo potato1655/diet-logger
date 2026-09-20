@@ -1,6 +1,7 @@
 import time
 import random
 import json
+import os
 from google import genai
 from config import GEMINI_API_KEYS
 
@@ -22,7 +23,7 @@ def call_gemini_with_retry(prompt, img_bytes=None):
                 contents = [prompt]
                 
             return client.models.generate_content(
-                model='gemini-3.6-flash',
+                model=os.environ.get('GEMINI_MODEL', 'gemini-3.6-flash'),
                 contents=contents,
             )
         except Exception as e:

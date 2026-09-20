@@ -10,9 +10,11 @@ app = Flask(__name__, static_folder='static')
 
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
 if not app.secret_key:
-    # We fallback to a random key if one is not provided, but save it locally
-    # so sessions aren't lost on every local server restart.
-    # Note: On Railway, this file is ephemeral, so users should set FLASK_SECRET_KEY.
+    if os.environ.get('APP_ENV') == 'production':
+        raise ValueError("FLASK_SECRET_KEY is required in production environment.")
+    
+    # We fallback to a random key if one is not provided in local development,
+    # but save it locally so sessions aren't lost on every local server restart.
     os.makedirs('data', exist_ok=True)
     secret_file = 'data/secret_key.txt'
     if os.path.exists(secret_file):

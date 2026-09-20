@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 from flask import current_app
 from config import GROQ_API_KEY
 
@@ -16,7 +17,7 @@ def call_groq_summary(prompt):
     
     # Using Llama 3 8B
     data = {
-        "model": "llama3-8b-8192",
+        "model": os.environ.get("GROQ_MODEL", "llama3-8b-8192"),
         "messages": [
             {
                 "role": "user",
