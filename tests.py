@@ -187,11 +187,44 @@ def test_micronutrient_mapping(client):
                 'fat_g': 5,
                 'fiber_g': 2,
                 'micros': {
-                    'sodium_mg': 500,        # 0.5 g
-                    'vitamin_c_mg': 60,      # 0.06 g
-                    'vitamin_b12_mcg': 2.4,  # 0.0000024 g
-                    'vitamin_d_iu': 400,     # Should be skipped
-                    'unknown_nutrient': 10   # Should be skipped
+                    'sugar_g': 15,
+                    'cholesterol_mg': 50,
+                    'sodium_mg': 500,
+                    'potassium_mg': 300,
+                    'calcium_mg': 200,
+                    'iron_mg': 1.5,
+                    'magnesium_mg': 40,
+                    'phosphorus_mg': 100,
+                    'zinc_mg': 2.5,
+                    'selenium_mcg': 15.0,
+                    'copper_mcg': 500,
+                    'manganese_mg': 0.5,
+                    'chromium_mcg': 20,
+                    'iodine_mcg': 50,
+                    'molybdenum_mcg': 10,
+                    'biotin_mcg': 15,
+                    'thiamin_mg': 0.5,
+                    'riboflavin_mg': 0.6,
+                    'niacin_mg': 5.0,
+                    'pantothenic_mg': 2.0,
+                    'vitamin_b6_mg': 1.0,
+                    'vitamin_b12_mcg': 2.4,
+                    'vitamin_c_mg': 60,
+                    'vitamin_e_mg': 5.0,
+                    'vitamin_k_mcg': 40,
+                    'folate_mcg': 200,
+                    'saturated_fat_g': 2,
+                    'trans_fat_g': 0.5,
+                    
+                    # Unsupported / Ignored
+                    'vitamin_a_iu': 1000,
+                    'vitamin_d_iu': 400,
+                    'omega_3_g': 1.5,
+                    'omega_6_g': 2.0,
+                    'epa_dha_mg': 250,
+                    'unknown_nutrient': 10,
+                    'choline_mg': 100,
+                    'fluoride_mg': 1.0
                 }
             }]
             
@@ -205,13 +238,92 @@ def test_micronutrient_mapping(client):
             # Expected mappings
             nutrient_dict = {n['nutrient']: n['quantity']['grams'] for n in nutrients}
             
+            # Core macros
             assert nutrient_dict['PROTEIN'] == 10.0
             assert nutrient_dict['DIETARY_FIBER'] == 2.0
+            
+            # 1 to 1 mapping (grams)
+            assert nutrient_dict['SUGAR'] == 15.0
+            assert nutrient_dict['SATURATED_FAT'] == 2.0
+            assert nutrient_dict['TRANS_FAT'] == 0.5
+            
+            # 1e-3 mapping (mg)
+            assert nutrient_dict['CHOLESTEROL'] == 0.05
             assert nutrient_dict['SODIUM'] == 0.5
+            assert nutrient_dict['POTASSIUM'] == 0.3
+            assert nutrient_dict['CALCIUM'] == 0.2
+            assert nutrient_dict['IRON'] == 0.0015
+            assert nutrient_dict['MAGNESIUM'] == 0.04
+            assert nutrient_dict['PHOSPHORUS'] == 0.1
+            assert nutrient_dict['ZINC'] == 0.0025
+            assert nutrient_dict['MANGANESE'] == 0.0005
+            assert nutrient_dict['THIAMIN'] == 0.0005
+            assert nutrient_dict['RIBOFLAVIN'] == 0.0006
+            assert nutrient_dict['NIACIN'] == 0.005
+            assert nutrient_dict['PANTOTHENIC_ACID'] == 0.002
+            assert nutrient_dict['VITAMIN_B6'] == 0.001
             assert nutrient_dict['VITAMIN_C'] == 0.06
-            assert nutrient_dict['VITAMIN_B12'] == 0.0000024
+            assert nutrient_dict['VITAMIN_E'] == 0.005
+            
+            # 1e-6 mapping (mcg)
+            assert nutrient_dict['SELENIUM'] == pytest.approx(0.000015)
+            assert nutrient_dict['COPPER'] == pytest.approx(0.0005)
+            assert nutrient_dict['CHROMIUM'] == pytest.approx(0.00002)
+            assert nutrient_dict['IODINE'] == pytest.approx(0.00005)
+            assert nutrient_dict['MOLYBDENUM'] == pytest.approx(0.00001)
+            assert nutrient_dict['BIOTIN'] == pytest.approx(0.000015)
+            assert nutrient_dict['VITAMIN_B12'] == pytest.approx(0.0000024)
+            assert nutrient_dict['VITAMIN_K'] == pytest.approx(0.00004)
+            assert nutrient_dict['FOLATE'] == pytest.approx(0.0002)
+            
+            # Ensure incorrect enums are absent
+            assert 'VITAMIN_B1' not in nutrient_dict
+            assert 'VITAMIN_B2' not in nutrient_dict
+            assert 'VITAMIN_B3' not in nutrient_dict
+            assert 'VITAMIN_B5' not in nutrient_dict
+            assert 'FOLIC_ACID' not in nutrient_dict
+            
+            # Ensure unsupported fields are absent
+            assert 'VITAMIN_A' not in nutrient_dict
             assert 'VITAMIN_D' not in nutrient_dict
             assert 'UNKNOWN_NUTRIENT' not in nutrient_dict
+            
+def test_groq_model_default(monkeypatch):
+    import groq_client
+    monkeypatch.delenv("GROQ_MODEL", raising=False)
+    monkeypatch.setattr(groq_client, "GROQ_API_KEY", "fake_key")
+    
+    with patch('groq_client.requests.post') as mock_post:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"choices": [{"message": {"content": "summary"}}]}
+        mock_post.return_value = resp
+        
+        groq_client.call_groq_summary("hello")
+        
+        payload = mock_post.call_args[1]['json']
+        assert payload['model'] == 'openai/gpt-oss-20b'
+        assert payload['messages'][0]['content'] == 'hello'
+        assert payload['temperature'] == 0.7
+        assert payload['max_tokens'] == 512
+        assert mock_post.call_args[1]['headers']['Authorization'] == 'Bearer fake_key'
+
+def test_groq_model_override(monkeypatch):
+    import groq_client
+    monkeypatch.setenv("GROQ_MODEL", "custom-model-id")
+    monkeypatch.setattr(groq_client, "GROQ_API_KEY", "fake_key")
+    
+    with patch('groq_client.requests.post') as mock_post:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"choices": [{"message": {"content": "summary"}}]}
+        mock_post.return_value = resp
+        
+        groq_client.call_groq_summary("hello")
+        
+        payload = mock_post.call_args[1]['json']
+        assert payload['model'] == 'custom-model-id'
+
 
 def test_secret_key_production(monkeypatch):
     # Remove SECRET_KEY and set production

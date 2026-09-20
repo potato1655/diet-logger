@@ -49,6 +49,8 @@ def log_to_google_health(foods, meal_type, time_str=None, timestamp=None):
         ]
         
         micros_map = {
+            'sugar_g': ('SUGAR', 1.0),
+            'cholesterol_mg': ('CHOLESTEROL', 1e-3),
             'sodium_mg': ('SODIUM', 1e-3),
             'potassium_mg': ('POTASSIUM', 1e-3),
             'calcium_mg': ('CALCIUM', 1e-3),
@@ -57,26 +59,24 @@ def log_to_google_health(foods, meal_type, time_str=None, timestamp=None):
             'phosphorus_mg': ('PHOSPHORUS', 1e-3),
             'zinc_mg': ('ZINC', 1e-3),
             'selenium_mcg': ('SELENIUM', 1e-6),
-            'copper_mg': ('COPPER', 1e-3),
+            'copper_mcg': ('COPPER', 1e-6),
             'manganese_mg': ('MANGANESE', 1e-3),
             'chromium_mcg': ('CHROMIUM', 1e-6),
             'iodine_mcg': ('IODINE', 1e-6),
-            'vitamin_a_mcg': ('VITAMIN_A', 1e-6),
-            'vitamin_c_mg': ('VITAMIN_C', 1e-3),
-            'vitamin_b1_mg': ('VITAMIN_B1', 1e-3),
-            'vitamin_b2_mg': ('VITAMIN_B2', 1e-3),
-            'vitamin_b3_mg': ('VITAMIN_B3', 1e-3),
-            'vitamin_b5_mg': ('VITAMIN_B5', 1e-3),
+            'molybdenum_mcg': ('MOLYBDENUM', 1e-6),
+            'biotin_mcg': ('BIOTIN', 1e-6),
+            'thiamin_mg': ('THIAMIN', 1e-3),
+            'riboflavin_mg': ('RIBOFLAVIN', 1e-3),
+            'niacin_mg': ('NIACIN', 1e-3),
+            'pantothenic_mg': ('PANTOTHENIC_ACID', 1e-3),
             'vitamin_b6_mg': ('VITAMIN_B6', 1e-3),
             'vitamin_b12_mcg': ('VITAMIN_B12', 1e-6),
+            'vitamin_c_mg': ('VITAMIN_C', 1e-3),
             'vitamin_e_mg': ('VITAMIN_E', 1e-3),
             'vitamin_k_mcg': ('VITAMIN_K', 1e-6),
-            'folate_mcg': ('FOLIC_ACID', 1e-6),
-            'folic_acid_mcg': ('FOLIC_ACID', 1e-6),
-            'sugar_g': ('SUGAR', 1.0),
-            'cholesterol_mg': ('CHOLESTEROL', 1e-3),
+            'folate_mcg': ('FOLATE', 1e-6),
             'saturated_fat_g': ('SATURATED_FAT', 1.0),
-            'trans_fat_g': ('TRANS_FAT', 1.0),
+            'trans_fat_g': ('TRANS_FAT', 1.0)
         }
         
         for micro_key, val in food.get('micros', {}).items():

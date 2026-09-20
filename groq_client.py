@@ -17,7 +17,7 @@ def call_groq_summary(prompt):
     
     # Using Llama 3 8B
     data = {
-        "model": os.environ.get("GROQ_MODEL", "llama3-8b-8192"),
+        "model": os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b"),
         "messages": [
             {
                 "role": "user",
